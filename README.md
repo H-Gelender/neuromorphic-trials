@@ -159,7 +159,8 @@ recherche-agi/
 │   ├── mnist_drift_test.ipynb          # test du modèle drift (anti-oubli catastrophique)
 │   ├── mnist_physarum_pruning.ipynb    # élagage Physarum des AnchorNeurons sous drift
 │   ├── mnist_global_accuracy.ipynb     # acc globale après drift (test aléatoire 0-9)
-│   └── mnist_visualize_evolution.ipynb # visualisation GIF de l'évolution du modèle
+│   ├── mnist_visualize_evolution.ipynb # visualisation GIF de l'évolution du modèle
+│   └── mnist_graph_evolution.ipynb     # graphe neuromorphique (co-activation + élagage)
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
 │   ├── deep_hebbian.py                # encodeur hiérarchique (L1→L2, anti-Hebbian, soft-WTA)
@@ -1174,6 +1175,33 @@ d'activation**, plus l'**acc globale** courante.
 Le GIF est dans `notebooks/figs/drift_evolution.gif` (11 frames, 0.8s/frame),
 les frames individuelles dans `notebooks/figs/drift_frame_XX.png`. (Ignorés par
 git — le notebook contient les images inline.)
+
+---
+
+# 🕸️ Évolution de l'ARCHITECTURE — graphe neuromorphique (co-activation)
+
+Le notebook `notebooks/mnist_graph_evolution.ipynb` génère un GIF de
+l'**évolution de la structure**, pas des résultats :
+- **Nœuds** = neurones d'ancrage (couleur = classe, gris = libre, taille ∝ flux)
+- **Arêtes** = **connexions de co-activation** (nb de fois que deux neurones
+  gagnent ensemble) — les vraies connexions neuromorphiques
+- **Élagage Physarum** : les neurones sous-utilisés sont atrophiés (gris), leurs
+  connexions disparaissent
+
+## Ce qu'on observe
+- **Phase 1 (0/1)** : nœuds rouges (0) et verts (1) avec connexions entre eux ;
+  le reste est gris (libre).
+- **Phase 2 (2-9)** : à chaque chiffre, de **nouveaux nœuds colorés** apparaissent
+  (2=jaune, 3=violet, 5=rose...) avec de **nouvelles connexions** vers ces classes
+  (ex. rouge 0 ↔ rose 5).
+- **Élagage Physarum** : des neurones sous-utilisés sont atrophiés (gris) et leurs
+  connexions **disparaissent** — libérant du budget.
+
+Le graphe se **réorganise en continu** : consolidation des connexions utiles,
+atrophie des inutiles. C'est l'**évolution de l'architecture neuromorphique**.
+
+GIF : `notebooks/figs/graph_evolution.gif` (11 frames). La co-activation est
+implémentée dans `AnchorNeurons.co_act` et atrophiée par `physarum_prune`.
 
 ## Résultats mesurés
 - **Couche lue sur z synaptique** : train 0.453 / test 0.393 (signature 64 dims

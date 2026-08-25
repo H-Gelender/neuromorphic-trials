@@ -89,6 +89,8 @@ class AnchorNeurons:
         self.theta = np.zeros(n_neurons)          # seuils de fatigue
         self.activations = np.zeros(n_neurons)    # cumul des activations
         self.labels_seen = {}                      # neurone -> classes observées
+        # CONNEXIONS NEUROMORPHIQUES : matrice de co-activation (i,j gagnent ensemble)
+        self.co_act = np.zeros((n_neurons, n_neurons))
 
     def activate(self, z: np.ndarray) -> np.ndarray:
         """Activations (similarité cosinus, seuillées par fatigue).
@@ -134,6 +136,12 @@ class AnchorNeurons:
             if label is not None:
                 self.labels_seen.setdefault(int(i), {}).setdefault(int(label), 0)
                 self.labels_seen[int(i)][int(label)] += 1
+
+        # CONNEXIONS NEUROMORPHIQUES : les gagnants de la même image se connectent
+        for i_i in range(len(idx)):
+            for j_j in range(i_i+1, len(idx)):
+                self.co_act[idx[i_i], idx[j_j]] += 1.0
+                self.co_act[idx[j_j], idx[i_i]] += 1.0
 
         # retour : vecteur d'activation (creux) = signature non supervisée
         out = np.zeros(self.n_neurons)
@@ -190,6 +198,9 @@ class AnchorNeurons:
             self.theta[i] = 0.0
             self.activations[i] = 0.0
             self.labels_seen.pop(i, None)
+            # atrophie des connexions neuromorphiques (tuyaux) de ce neurone
+            self.co_act[i, :] = 0.0
+            self.co_act[:, i] = 0.0
         return n_prune
 
     # ------------------------------------------------------------------ #
