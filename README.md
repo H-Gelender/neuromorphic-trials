@@ -154,9 +154,11 @@ recherche-agi/
 │   ├── mnist_unsupervised.ipynb        # classification 100% non supervisée (neurones d'ancrage)
 │   ├── mnist_topdown_recall.ipynb      # rappel top-down (régénération + résonance)
 │   ├── mnist_self_eval_loop.ipynb      # boucle d'auto-évaluation de la surprise (S_auto)
-│   └── mnist_visualize_accuracy.ipynb  # visualisation (accuracy + convergence S_auto)
+│   ├── mnist_visualize_accuracy.ipynb  # visualisation (accuracy + convergence S_auto)
+│   └── mnist_deep_hebbian.ipynb        # Deep Hebbian hiérarchique (L1 bords → L2 formes)
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
+│   ├── deep_hebbian.py                # encodeur hiérarchique (L1→L2, anti-Hebbian, soft-WTA)
 │   ├── enhanced_reservoir.py          # réservoir amélioré (rétine, multi-axe, compétition)
 │   ├── image_graph.py                 # image -> graphe superpixels (Felzenszwalb)
 │   ├── local_ssm.py                   # SSM local (h_t = (1-Δ)h + Δ·x)
@@ -972,6 +974,46 @@ La figure montre pour 3 chiffres : l'image réelle, l'image **avant** la boucle
 ## Conclusion
 Les visualisations montrent un système **autonome** qui apprend (accuracy monte),
 **juge** (S_auto) et **se corrige** (affinement itératif), sans aucune supervision.
+
+---
+
+# 🏗️ Deep Hebbian hiérarchique (L1 bords → L2 formes)
+
+Le notebook `notebooks/mnist_deep_hebbian.ipynb` refond la classification avec une
+**hiérarchie** : L1 apprend des détecteurs de bords (petits patches), L2 combine
+ces bords en formes (boucles, intersections).
+
+## Les mécanismes
+1. **Hiérarchie Deep Hebbian** : L1 (patches 4-7×4-7 → 32-64 bords) → L2 (→ 64-128 formes).
+2. **Anti-Hebbian** : décorrèle les neurones qui gagnent ensemble (spécialisation).
+3. **Soft-WTA** (SoftHebb) : sélection probabiliste des gagnants à l'apprentissage,
+   déterministe à l'inférence.
+
+Le **saliency-gate a été retiré** : il bloquait trop l'apprentissage (62% des
+mises à jour à eta=0). On apprend sur chaque entrée (Deep Hebbian pur).
+
+## Résultats mesurés
+| Réglage | Dims | Test acc (supervisé) |
+|---|---|---|
+| Base (n_learn=3) | 96 | 0.230 |
+| n_learn=8 | 96 | 0.235 |
+| Plus large (64/128) | 192 | 0.340 |
+| patch 7, plus large | 192 | **0.395** |
+
+Classification non supervisée (ancres) : 0.170.
+
+## Analyse honnête
+Le Deep Hebbian hiérarchique **ne dépasse pas l'encodeur simple (0.747)**. Le
+plafond est ~0.40 même avec un encodeur plus large. **Causes probables** :
+1. Le **soft-WTA probabiliste + l'agrégation L1→L2 par somme détruisent la
+   structure spatiale** (la position des bords est perdue).
+2. La littérature (HMAX, PCANet) garde des **feature maps positionnées** entre
+   les couches — pas une somme globale.
+3. L'anti-Hebbian et la sparsité réduisent encore la capacité.
+
+=> La hiérarchie est le bon concept mais nécessite de **préserver l'espace**
+(feature maps) entre L1 et L2, pas une agrégation par somme — une piste pour la
+suite.
 
 ## Résultats mesurés
 - **Couche lue sur z synaptique** : train 0.453 / test 0.393 (signature 64 dims

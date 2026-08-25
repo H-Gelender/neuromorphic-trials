@@ -9,6 +9,7 @@ Le **modèle** (TinyExpert / TinyMoE) vit dans le notebook : on le fait évoluer
 itérativement là-bas. Les services y accèdent par duck-typing (nn.Module).
 """
 from .data import filter_by_digits, load_mnist
+from .deep_hebbian import DeepHebbian, anti_hebbian_update, saliency_gate, soft_wta
 from .enhanced_reservoir import EnhancedReservoir, competitive_pooling, multi_axis_signature, retina_filter
 from .image_graph import image_to_graph, physarum_from_image, superpixels
 from .local_ssm import LocalSSM, SSMLayer, surprise_to_delta
@@ -44,6 +45,11 @@ __all__ = [
     # données
     "filter_by_digits",
     "load_mnist",
+    # deep hebbian hiérarchique
+    "DeepHebbian",
+    "anti_hebbian_update",
+    "saliency_gate",
+    "soft_wta",
     # réservoir synaptique amélioré
     "EnhancedReservoir",
     "competitive_pooling",
