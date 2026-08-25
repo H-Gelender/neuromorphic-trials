@@ -150,7 +150,8 @@ recherche-agi/
 │   ├── mnist_local_ssm.ipynb           # SSM local (intégration temporelle sous chaque nœud)
 │   ├── mnist_sensory_bundle.ipynb      # fourre-tout sensoriel (image, texte, signal)
 │   ├── mnist_multimodal_context.ipynb  # couplage vision + langage (image + label texte)
-│   └── mnist_fewshot_pretrain.ipynb    # pré-entraînement few-shot + gel anti-oubli
+│   ├── mnist_fewshot_pretrain.ipynb    # pré-entraînement few-shot + gel anti-oubli
+│   └── mnist_unsupervised.ipynb        # classification 100% non supervisée (neurones d'ancrage)
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
 │   ├── enhanced_reservoir.py          # réservoir amélioré (rétine, multi-axe, compétition)
@@ -158,6 +159,7 @@ recherche-agi/
 │   ├── local_ssm.py                   # SSM local (h_t = (1-Δ)h + Δ·x)
 │   ├── neuromodulated.py              # boucle neuromodulée (plasticité gérée par surprise)
 │   ├── sensory_bundle.py              # fourre-tout sensoriel (encodeur multi-modalités)
+│   ├── unsupervised.py                # classification non supervisée (SOM + WTA dynamique + fatigue)
 │   ├── physarum.py                    # solveur Physarum (Tero 2007)
 │   ├── predictive_physarum.py         # hybride Blob + Predictive Coding
 │   ├── synaptic_physarum.py           # Physarum synaptique (tanh + Hebbien + pooling)
@@ -792,6 +794,45 @@ Le notebook `notebooks/mnist_fewshot_pretrain.ipynb` implémente la phase de
 
 => Le paradigme few-shot fonctionne : pré-entraînement minimal, gel, puis
 classification avec peu d'exemples étiquetés.
+
+---
+
+# 🧠 Classification 100% non supervisée — neurones d'ancrage
+
+Le notebook `notebooks/mnist_unsupervised.ipynb` **retire toute partie supervisée**
+(pas de couche lue, pas de régression) et utilise 3 mécanismes Hebbiens.
+
+## Les 3 mécanismes
+1. **Neurones d'ancrage** (SOM / K-Means Hebbien) : des neurones concourent pour
+   s'activer sur z ; le plus proche ajuste ses poids vers z (Oja). Les clusters
+   émergent **sans jamais voir une étiquette**.
+2. **WTA dynamique** : `K(S)` varie avec la surprise — S élevée → K augmente
+   (analyse détaillée), S faible → K diminue (compact).
+3. **Fatigue synaptique / homéostasie** : `θ_i += α·y_i` — un neurone qui gagne
+   souvent voit son seuil monter → exploration des primitives.
+4. **Top-down predictive feedback** : la prédiction ẑ est renvoyée à l'encodeur
+   comme inhibition → seule l'erreur résiduelle passe.
+
+L'**étiquetage est une observation a posteriori** : on observe quel neurone répond
+à quelle classe.
+
+## Résultats mesurés
+| Mécanisme | Comportement |
+|---|---|
+| WTA dynamique | K : 2 → 4 quand S passe de 0 à 1 |
+| Fatigue | θ du neurone actif : 0 → 0.80 (seuil monte) |
+| Top-down | z (norm 2.83) → z_résiduel (norm 1.0) |
+| **Classification non supervisée** | **0.490** |
+| Pureté moyenne des clusters | 0.505 |
+
+## Commentaire honnête
+1. **AUCUNE supervision** : pas de couche lue ni de régression. Les clusters
+   émergent des données via Oja/Hebbian (SOM).
+2. Le WTA dynamique adapte la sparsité à la surprise ; la fatigue empêche la
+   dominance d'un canal ; le top-down transmet l'erreur résiduelle.
+3. **Coût** : la non-supervision coûte ~25 points (0.75 supervisé → 0.49), mais
+   le système ne voit **aucune étiquette** pendant l'apprentissage — c'est le
+   **paradigme autonome** recherché.
 
 ## Résultats mesurés
 - **Couche lue sur z synaptique** : train 0.453 / test 0.393 (signature 64 dims

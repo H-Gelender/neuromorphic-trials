@@ -19,6 +19,7 @@ from .sensory_bundle import SensoryBundle, PredictiveEncoder, oja_hebbian_update
 from .synaptic_physarum import SynapticReservoir, dendritic_pooling, hebbian_plasticity, synaptic_signature
 from .training import (EarlyStopping, evaluate, freeze_experts, train_expert_on_dataset,
                        train_router, train_tiny_moe, unfreeze_experts, verify_frozen)
+from .unsupervised import AnchorNeurons, dynamic_k, homeostatic_threshold, topdown_feedback
 
 # Rendre les services disponibles au niveau racine du paquet.
 from .services import (  # noqa: E402
@@ -67,6 +68,11 @@ __all__ = [
     "PredictiveEncoder",
     "oja_hebbian_update",
     "surprise_rate",
+    # classification non supervisée
+    "AnchorNeurons",
+    "dynamic_k",
+    "homeostatic_threshold",
+    "topdown_feedback",
     # physarum
     "PhysarumGraph",
     "classify_by_drainage",
