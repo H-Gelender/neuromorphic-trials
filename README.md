@@ -158,7 +158,8 @@ recherche-agi/
 │   ├── mnist_deep_hebbian.ipynb        # Deep Hebbian hiérarchique (L1 bords → L2 formes)
 │   ├── mnist_drift_test.ipynb          # test du modèle drift (anti-oubli catastrophique)
 │   ├── mnist_physarum_pruning.ipynb    # élagage Physarum des AnchorNeurons sous drift
-│   └── mnist_global_accuracy.ipynb     # acc globale après drift (test aléatoire 0-9)
+│   ├── mnist_global_accuracy.ipynb     # acc globale après drift (test aléatoire 0-9)
+│   └── mnist_visualize_evolution.ipynb # visualisation GIF de l'évolution du modèle
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
 │   ├── deep_hebbian.py                # encodeur hiérarchique (L1→L2, anti-Hebbian, soft-WTA)
@@ -1144,6 +1145,35 @@ l'entraînement en drift, sur un **échantillon aléatoire de toutes les classes
    **TOUTES les classes (0-9)** malgré l'apprentissage séquentiel.
 3. C'est une **démonstration complète** : adaptation au drift + gestion des
    ressources + généralisation globale, entièrement non supervisée.
+
+---
+
+# 🎬 Visualisation de l'évolution du modèle (GIF)
+
+Le notebook `notebooks/mnist_visualize_evolution.ipynb` génère un **GIF animé** +
+des **images séquentielles** montrant l'évolution des **neurones d'ancrage**
+pendant l'entraînement en drift (0/1 puis 2-9 avec élagage Physarum).
+
+Chaque frame montre une **grille de 20 prototypes de neurones** (régénérés par
+rétro-projection des poids) avec leur **classe dominante** et leur **flux
+d'activation**, plus l'**acc globale** courante.
+
+## Les frames (11)
+- **Phase 1 (0/1)** : frames à 50, 150, 400 images — les prototypes deviennent
+  des 0/1, des neurones restent libres.
+- **Phase 2 (2-9)** : une frame par chiffre introduit — de nouveaux prototypes
+  apparaissent (2, 3, 8, 9...), l'acc monte, l'élagage Physarum libère du budget.
+
+## Évolution visible
+| Frame | État | Acc globale |
+|---|---|---|
+| 1 (50 img 0/1) | prototypes 0/1 + neurones libres | 0.60 |
+| mi-drift | mélange de prototypes | ~0.8 |
+| finale (après 9) | neurones spécialisés 0-9 | **0.95** |
+
+Le GIF est dans `notebooks/figs/drift_evolution.gif` (11 frames, 0.8s/frame),
+les frames individuelles dans `notebooks/figs/drift_frame_XX.png`. (Ignorés par
+git — le notebook contient les images inline.)
 
 ## Résultats mesurés
 - **Couche lue sur z synaptique** : train 0.453 / test 0.393 (signature 64 dims
