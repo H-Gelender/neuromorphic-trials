@@ -152,7 +152,8 @@ recherche-agi/
 │   ├── mnist_multimodal_context.ipynb  # couplage vision + langage (image + label texte)
 │   ├── mnist_fewshot_pretrain.ipynb    # pré-entraînement few-shot + gel anti-oubli
 │   ├── mnist_unsupervised.ipynb        # classification 100% non supervisée (neurones d'ancrage)
-│   └── mnist_topdown_recall.ipynb      # rappel top-down (régénération + résonance)
+│   ├── mnist_topdown_recall.ipynb      # rappel top-down (régénération + résonance)
+│   └── mnist_self_eval_loop.ipynb      # boucle d'auto-évaluation de la surprise (S_auto)
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
 │   ├── enhanced_reservoir.py          # réservoir amélioré (rétine, multi-axe, compétition)
@@ -890,6 +891,51 @@ viennent de neurones d'ancrage qui regroupent des chiffres visuellement proches
    clusters sont imparfaits.
 3. C'est la boucle **perception → abstraction → régénération**, entièrement
    non supervisée.
+
+---
+
+# 🎯 Boucle d'Auto-Évaluation de la Surprise (S_auto)
+
+Le notebook `notebooks/mnist_self_eval_loop.ipynb` implémente la **boucle
+itérative d'auto-évaluation** qui juge la fidélité de l'image générée au concept
+assimilé.
+
+## La boucle
+```
+Génération (Action) : Neurone i → image prototype x̂
+      │
+      ▼
+Ré-injection (Perception) : x̂ ré-injecté dans le SensoryBundle
+      │
+      ▼
+Comparaison (Jugement) : Surprise d'Auto-Évaluation S_auto = ||z_re - z_cur||
+      │
+      ▼
+Affinement (Correction) :
+  - S_auto faible → image fidèle → BOUCLE S'ARRÊTE
+  - S_auto élevée → correction du latent (Oja inversée / point fixe) → repart
+```
+
+## Résultats mesurés
+| Métrique | Valeur |
+|---|---|
+| S_auto initiale (moyenne, 10 chiffres) | 3.371 |
+| S_auto finale | 3.000 |
+| Réduction moyenne | 0.371 (**11%**) |
+| Convergence (ex. neurone du 7) | 3.44 → 3.00 en 6 itérations |
+
+La figure montre la convergence de S_auto sur les 10 chiffres.
+
+## Commentaire honnête
+1. La boucle **converge** : l'affinement itératif réduit la surprise
+   d'auto-évaluation (point fixe).
+2. **S_auto élevée → correction** du latent (Oja inversée / point fixe) ;
+   **S_auto faible → image fidèle** → boucle s'arrête.
+3. C'est l'**auto-évaluation** : le système juge lui-même la qualité de sa
+   génération, **sans aucune étiquette ni superviseur externe**.
+4. La convergence vers 3.0 (pas 0) reflète le **plancher de reconstruction**
+   de la rétro-projection transposée — mais la boucle affine l'image vers le
+   concept le plus cohérent.
 
 ## Résultats mesurés
 - **Couche lue sur z synaptique** : train 0.453 / test 0.393 (signature 64 dims

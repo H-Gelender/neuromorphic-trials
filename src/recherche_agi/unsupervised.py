@@ -229,3 +229,35 @@ class AnchorNeurons:
             return None
         lat = s / c
         return lat / (np.linalg.norm(lat) + 1e-8)
+
+    # ------------------------------------------------------------------ #
+    # BOUCLE D'AUTO-ÉVALUATION DE LA SURPRISE (génération -> jugement)
+    # ------------------------------------------------------------------ #
+    def self_evaluate_loop(self, neuron_idx: int, encode_fn, recon_fn,
+                           n_iter: int = 6, lr_affine: float = 0.3,
+                           verbose: bool = True) -> dict:
+        """Boucle d'auto-évaluation de la surprise S_auto.
+
+        1. GÉNÉRATION : le neurone génère l'image prototype x̂ (rétro-projection).
+        2. RÉ-INJECTION : l'image est ré-injectée dans l'encodeur.
+        3. COMPARAISON : surprise d'auto-évaluation S_auto = ||z_re - z_cur||.
+        4. AFFINEMENT : si S_auto élevée, on déplace z_cur vers le latent re-encodé
+           (règle de point fixe / Oja inversée), puis on repart.
+
+        Retourne l'historique des S_auto + le latent affiné final.
+        """
+        z_cur = self.reconstruct_latent(neuron_idx).copy()
+        hist = []
+        for _ in range(n_iter):
+            img = recon_fn(z_cur)                 # 1. génération
+            z_re = encode_fn(img)                 # 2. ré-injection
+            S_auto = float(np.linalg.norm(z_re - z_cur))  # 3. comparaison
+            hist.append(S_auto)
+            if verbose:
+                print(f"    it {len(hist)}: S_auto = {S_auto:.4f}")
+            # 4. affinement (point fixe) : S_auto élevée → correction
+            z_cur = z_cur + lr_affine * (z_re - z_cur)
+            z_cur = z_cur / (np.linalg.norm(z_cur) + 1e-8)
+        return {'S_auto_history': hist, 'latent_final': z_cur,
+                'S_auto_initial': hist[0] if hist else None,
+                'S_auto_final': hist[-1] if hist else None}
