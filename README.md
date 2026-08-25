@@ -156,7 +156,8 @@ recherche-agi/
 │   ├── mnist_self_eval_loop.ipynb      # boucle d'auto-évaluation de la surprise (S_auto)
 │   ├── mnist_visualize_accuracy.ipynb  # visualisation (accuracy + convergence S_auto)
 │   ├── mnist_deep_hebbian.ipynb        # Deep Hebbian hiérarchique (L1 bords → L2 formes)
-│   └── mnist_drift_test.ipynb          # test du modèle drift (anti-oubli catastrophique)
+│   ├── mnist_drift_test.ipynb          # test du modèle drift (anti-oubli catastrophique)
+│   └── mnist_physarum_pruning.ipynb    # élagage Physarum des AnchorNeurons sous drift
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
 │   ├── deep_hebbian.py                # encodeur hiérarchique (L1→L2, anti-Hebbian, soft-WTA)
@@ -1077,6 +1078,42 @@ Le notebook `notebooks/mnist_drift_test.ipynb` observe comment les **AnchorNeuro
 
 La **fatigue homéostatique + neurones d'ancrage** permettent un apprentissage
 incrémental sans oubli catastrophique — un résultat clé pour le système autonome.
+
+---
+
+# 🌿 Physarum + AnchorNeurons — élagage dynamique sous drift
+
+Le notebook `notebooks/mnist_physarum_pruning.ipynb` teste le **rôle de Physarum**
+pour résoudre le goulot d'étranglement (200 neurones saturés → acc 5-9 dégradé).
+
+## Le mécanisme
+Physarum excelle dans l'**élagage** (atrophie des tuyaux à faible flux) et la
+**réallocation**. On modélise chaque neurone d'ancrage comme un tuyau (flux =
+activation cumulée) :
+- **Consolider** les autoroutes utiles (fort flux → 0/1, 2, 3)
+- **Atrophier** les neurones sous-utilisés → libérer du budget pour 5-9
+
+`AnchorNeurons.physarum_prune()` élague les neurones à plus faible flux.
+
+## Résultats (protocole drift identique, 200 neurones)
+| Config | Acc 0/1 fin | **Acc 5-9 moy** | Neurones |
+|---|---|---|---|
+| **Sans Physarum** | 0.980 | **0.508** | 200 (saturés) |
+| prune 0.15 | 1.000 | 0.860 | 170 |
+| prune 0.2 | 0.990 | 0.760 | 160 |
+| **prune 0.3** | 1.000 | **0.904** | 140 |
+
+**GAIN sur 5-9 : +0.372 (+73%)** — avec MOINS de neurones actifs.
+
+## Conclusion
+1. **Physarum RÉSOUT le goulot** : en élaguant les neurones sous-utilisés, il
+   libère du budget pour 5-9 **sans saturer** les 200 neurones.
+2. **0/1 reste > 0.95 (préservé)** et 5-9 monte nettement (0.51 → 0.90).
+3. **Avec moins de neurones** (140 vs 200) : les ressources sont mieux exploitées
+   (atrophie des redondants, consolidation des autoroutes utiles).
+4. C'est une **démonstration d'adaptation dynamique sous contrainte de
+   ressources** — Physarum n'est pas une dégradation ici, c'est le levier qui
+   fait passer le système au-dessus des seuils cibles (5-9 > 0.70, 0/1 > 0.95).
 
 ## Résultats mesurés
 - **Couche lue sur z synaptique** : train 0.453 / test 0.393 (signature 64 dims

@@ -161,6 +161,38 @@ class AnchorNeurons:
         return out
 
     # ------------------------------------------------------------------ #
+    # ÉLAGAGE TYPE PHYSARUM (réallocation dynamique des ressources)
+    # ------------------------------------------------------------------ #
+    def physarum_prune(self, prune_frac: float = 0.15, min_keep: int = 5,
+                       seed: int = None) -> int:
+        """Élague les neurones à faible flux d'utilisation (atrophie Physarum).
+
+        Modélise chaque neurone comme un tuyau : son ACTIVATION cumulée est le
+        flux D. Les neurones sous-utilisés ou redondants (faible flux) sont
+        ATROPHIÉS (réinitialisés), libérant du budget pour apprendre de
+        nouveaux motifs — sans détruire les neurones utiles (fort flux).
+
+        Retourne le nombre de neurones élagués.
+        """
+        act = self.activations.copy()
+        if act.sum() > 0:
+            flux = act / act.sum()
+        else:
+            flux = act
+        n_prune = max(0, int(prune_frac * len(act)))
+        if len(act) - n_prune < min_keep:
+            n_prune = len(act) - min_keep
+        idx = np.argsort(flux)[:n_prune]   # les neurones au plus faible flux
+        rng = np.random.default_rng(seed)
+        for i in idx:
+            self.W[i] = rng.normal(0, 1/np.sqrt(self.d_in), size=self.d_in)
+            self.W[i] /= np.linalg.norm(self.W[i]) + 1e-8
+            self.theta[i] = 0.0
+            self.activations[i] = 0.0
+            self.labels_seen.pop(i, None)
+        return n_prune
+
+    # ------------------------------------------------------------------ #
     # RAPPEL TOP-DOWN GÉNÉRATIF (inverse de la perception)
     # ------------------------------------------------------------------ #
     def reconstruct_latent(self, neuron_idx: int) -> np.ndarray:
