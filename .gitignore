@@ -1,0 +1,21 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Datasets / cache (MNIST ~100 Mo)
+data/
+*.ipynb_checkpoints/
+
+# Figures extraites du notebook
+notebooks/figs/
+
+# Checkpoints de modèles
+checkpoints/
+
