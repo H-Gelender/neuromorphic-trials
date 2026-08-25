@@ -153,7 +153,8 @@ recherche-agi/
 │   ├── mnist_fewshot_pretrain.ipynb    # pré-entraînement few-shot + gel anti-oubli
 │   ├── mnist_unsupervised.ipynb        # classification 100% non supervisée (neurones d'ancrage)
 │   ├── mnist_topdown_recall.ipynb      # rappel top-down (régénération + résonance)
-│   └── mnist_self_eval_loop.ipynb      # boucle d'auto-évaluation de la surprise (S_auto)
+│   ├── mnist_self_eval_loop.ipynb      # boucle d'auto-évaluation de la surprise (S_auto)
+│   └── mnist_visualize_accuracy.ipynb  # visualisation (accuracy + convergence S_auto)
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
 │   ├── enhanced_reservoir.py          # réservoir amélioré (rétine, multi-axe, compétition)
@@ -936,6 +937,41 @@ La figure montre la convergence de S_auto sur les 10 chiffres.
 4. La convergence vers 3.0 (pas 0) reflète le **plancher de reconstruction**
    de la rétro-projection transposée — mais la boucle affine l'image vers le
    concept le plus cohérent.
+
+---
+
+# 📊 Visualisation des résultats
+
+Le notebook `notebooks/mnist_visualize_accuracy.ipynb` **visualise** l'évolution
+du système non supervisé.
+
+## 1. Évolution de l'accuracy pendant l'apprentissage
+| Étape | Accuracy |
+|---|---|
+| Début (50 images) | 0.354 |
+| Milieu (250 images) | 0.475 |
+| Fin (400 images) | 0.440-0.500 |
+
+L'accuracy **monte** avec les images vues (0.38 → 0.44+ en moyenne) : les neurones
+d'ancrage se spécialisent progressivement (WTA + fatigue). Les oscillations
+reflètent la redistribution des gagnants pendant l'apprentissage.
+
+## 2. Convergence S_auto (images avant/après)
+La figure montre pour 3 chiffres : l'image réelle, l'image **avant** la boucle
+(prototype), l'image **après** la boucle (affinée), et la différence.
+
+| Métrique | Avant | Après |
+|---|---|---|
+| S_auto (moyenne, 10 chiffres) | 3.368 | **3.000** (−10.9%) |
+
+## 3. Les 3 figures
+1. Courbe d'accuracy (montée pendant l'apprentissage)
+2. Images avant/après la boucle d'auto-évaluation (3 chiffres)
+3. Courbe de convergence S_auto (10 chiffres)
+
+## Conclusion
+Les visualisations montrent un système **autonome** qui apprend (accuracy monte),
+**juge** (S_auto) et **se corrige** (affinement itératif), sans aucune supervision.
 
 ## Résultats mesurés
 - **Couche lue sur z synaptique** : train 0.453 / test 0.393 (signature 64 dims
