@@ -157,7 +157,8 @@ recherche-agi/
 │   ├── mnist_visualize_accuracy.ipynb  # visualisation (accuracy + convergence S_auto)
 │   ├── mnist_deep_hebbian.ipynb        # Deep Hebbian hiérarchique (L1 bords → L2 formes)
 │   ├── mnist_drift_test.ipynb          # test du modèle drift (anti-oubli catastrophique)
-│   └── mnist_physarum_pruning.ipynb    # élagage Physarum des AnchorNeurons sous drift
+│   ├── mnist_physarum_pruning.ipynb    # élagage Physarum des AnchorNeurons sous drift
+│   └── mnist_global_accuracy.ipynb     # acc globale après drift (test aléatoire 0-9)
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
 │   ├── deep_hebbian.py                # encodeur hiérarchique (L1→L2, anti-Hebbian, soft-WTA)
@@ -1114,6 +1115,35 @@ activation cumulée) :
 4. C'est une **démonstration d'adaptation dynamique sous contrainte de
    ressources** — Physarum n'est pas une dégradation ici, c'est le levier qui
    fait passer le système au-dessus des seuils cibles (5-9 > 0.70, 0/1 > 0.95).
+
+---
+
+# 🎯 Acc GLOBALE après drift (test aléatoire 0-9)
+
+Le notebook `notebooks/mnist_global_accuracy.ipynb` teste l'acc **globale** après
+l'entraînement en drift, sur un **échantillon aléatoire de toutes les classes 0-9**
+(vrai test de généralisation).
+
+## Résultats (protocole drift identique, 300 chiffres aléatoires)
+| Approche | Acc globale |
+|---|---|
+| **Sans Physarum** | **0.620** |
+| **Avec élagage Physarum** | **0.951** |
+| **Gain** | **+0.331** |
+
+## Acc par classe (avec Physarum)
+| Chiffre | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Acc | 1.00 | 0.96 | 1.00 | 1.00 | 0.80 | 1.00 | 1.00 | 1.00 | 1.00 | 0.88 |
+
+## Conclusion
+1. **Sans Physarum**, le système drift saturé plafonne à **0.62** : les classes
+   tardives (2, 8, 9) dégradent fortement (0.43-0.55).
+2. **Avec l'élagage Physarum**, l'acc globale atteint **0.95 (+0.33)** : les
+   ressources sont réallouées dynamiquement, et le système généralise sur
+   **TOUTES les classes (0-9)** malgré l'apprentissage séquentiel.
+3. C'est une **démonstration complète** : adaptation au drift + gestion des
+   ressources + généralisation globale, entièrement non supervisée.
 
 ## Résultats mesurés
 - **Couche lue sur z synaptique** : train 0.453 / test 0.393 (signature 64 dims
