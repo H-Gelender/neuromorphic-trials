@@ -1015,6 +1015,32 @@ plafond est ~0.40 même avec un encodeur plus large. **Causes probables** :
 (feature maps) entre L1 et L2, pas une agrégation par somme — une piste pour la
 suite.
 
+## Feature maps SPATIALES (SpatialDeepHebbian)
+
+On préserve la **structure spatiale** entre L1 et L2 (la cause n°1 de l'échec) :
+- **L1** : `W_l1` PARTAGÉ (détecteurs de bords invariants par translation) →
+  feature map positionnée F ∈ (H,W,n_l1).
+- **L2** : **convolution Hebbienne** sur voisinages 3×3 de F → combine les bords
+  en formes à leur position (équivalent CNN non supervisé).
+
+## Bilan final : Hebbian pur plafonne
+
+| Approche | Test acc (supervisé) |
+|---|---|
+| DeepHebbian (somme) | 0.395 |
+| **SpatialDeepHebbian (feature maps)** | 0.355 |
+| Encodeur simple + couche lue | **0.747** |
+
+**Conclusion honnête** :
+1. Les feature maps spatiales ne battent **pas** l'encodeur simple.
+2. Même en préservant l'espace, l'**Hebbian pur plafonne à ~0.39**.
+3. Le vrai goulot = la **supervision**, pas l'architecture : le décodage
+   supervisé (couche lue) sur l'encodeur simple atteint 0.747.
+4. L'apprentissage Hebbian (sans régression) **capture les primitives** (bords,
+   formes) mais **pas la séparation des classes**.
+5. La hiérarchie spatiale est le bon concept pour les **primitives** ; la
+   **classification** nécessite un décodage plus puissant.
+
 ## Résultats mesurés
 - **Couche lue sur z synaptique** : train 0.453 / test 0.393 (signature 64 dims
   au lieu de 364 flux bruts — très compacte).

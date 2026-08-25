@@ -28,7 +28,102 @@ from __future__ import annotations
 
 import numpy as np
 
-__all__ = ["DeepHebbian", "saliency_gate", "soft_wta", "anti_hebbian_update"]
+__all__ = ["DeepHebbian", "saliency_gate", "soft_wta", "anti_hebbian_update",
+           "SpatialDeepHebbian"]
+
+
+class SpatialDeepHebbian:
+    """Encodeur hiérarchique SPATIAL (CNN Hebbien non supervisé).
+
+    Préserve la STRUCTURE SPATIALE entre L1 et L2 (cause n°1 de l'échec de la
+    version par somme) :
+
+    - L1 : un W_l1 PARTAGÉ (détecteurs de bords invariants par translation)
+      appliqué à chaque patch → feature map F ∈ ℝ^(H×W×n_l1) POSITIONNÉE.
+    - L2 : convolution Hebbienne sur voisinages spatiaux de F → combine les
+      bords en formes (boucle, angle, intersection) À LEUR POSITION.
+
+    Apprentissage : Hebbian (déplace les filtres vers les patchs), anti-Hebbian
+    (décorrélation), soft-WTA déterministe à l'inférence.
+    """
+
+    def __init__(self, patch_l1: int = 4, n_l1: int = 32, n_l2: int = 64,
+                 lr_l1: float = 0.05, lr_l2: float = 0.05, seed: int = 0,
+                 temp: float = 1.0, n_learn: int = 4, lr_anti: float = 0.01):
+        self.patch_l1 = patch_l1
+        self.n_l1 = n_l1
+        self.n_l2 = n_l2
+        self.lr_l1 = lr_l1
+        self.lr_l2 = lr_l2
+        self.temp = temp
+        self.n_learn = n_learn
+        self.lr_anti = lr_anti
+        self.rng = np.random.default_rng(seed)
+
+        # L1 : W partagé (n_l1 détecteurs), patch_l1² entrées
+        d_l1 = patch_l1 * patch_l1
+        self.W1 = self.rng.normal(0, 1/np.sqrt(d_l1), size=(n_l1, d_l1))
+        self.W1 = self.W1 / (np.linalg.norm(self.W1, axis=1, keepdims=True) + 1e-8)
+        # L2 : W convolutif (n_l2 filtres), voisinage 3x3 de feature maps = 9*n_l1
+        self.ks = 3  # taille du voisinage L2
+        d_l2 = (self.ks * self.ks) * n_l1
+        self.W2 = self.rng.normal(0, 1/np.sqrt(d_l2), size=(n_l2, d_l2))
+        self.W2 = self.W2 / (np.linalg.norm(self.W2, axis=1, keepdims=True) + 1e-8)
+
+    def _feature_map_l1(self, img, learn):
+        """L1 : feature map spatiale F ∈ (H,W,n_l1)."""
+        img = np.asarray(img).squeeze()
+        lo, hi = img.min(), img.max()
+        img01 = (img - lo) / (hi - lo + 1e-8)
+        p = self.patch_l1
+        h, w = img01.shape
+        gh, gw = h // p, w // p
+        F = np.zeros((gh, gw, self.n_l1))
+        for i in range(gh):
+            for j in range(gw):
+                patch = img01[i*p:(i+1)*p, j*p:(j+1)*p].flatten()
+                pn = patch / (np.linalg.norm(patch) + 1e-8)
+                a = self.W1 @ pn
+                y = soft_wta(a, self.temp, self.n_learn, deterministic=not learn)
+                F[i, j] = y
+                if learn:
+                    # Hebbian (même W partagé partout) + anti-hebbian
+                    self.W1 += self.lr_l1 * np.outer(y, pn)
+                    self.W1 = anti_hebbian_update(self.W1, y, pn, self.lr_anti)
+                    self.W1 = self.W1 / (np.linalg.norm(self.W1, axis=1, keepdims=True) + 1e-8)
+        return F, gh, gw
+
+    def _encode_l2_conv(self, F, gh, gw, learn):
+        """L2 : convolution Hebbienne sur voisinages 3x3 de la feature map."""
+        ks = self.ks
+        pad = ks // 2
+        Fp = np.pad(F, ((pad, pad), (pad, pad), (0, 0)))  # (gh+2, gw+2, n_l1)
+        out = np.zeros((gh, gw, self.n_l2))
+        for i in range(gh):
+            for j in range(gw):
+                # voisinage 3x3 × n_l1
+                nb = Fp[i:i+ks, j:j+ks].flatten()
+                nb = nb / (np.linalg.norm(nb) + 1e-8)
+                a = self.W2 @ nb
+                y = soft_wta(a, self.temp, self.n_learn, deterministic=not learn)
+                out[i, j] = y
+                if learn:
+                    self.W2 += self.lr_l2 * np.outer(y, nb)
+                    self.W2 = anti_hebbian_update(self.W2, y, nb, self.lr_anti)
+                    self.W2 = self.W2 / (np.linalg.norm(self.W2, axis=1, keepdims=True) + 1e-8)
+        return out
+
+    def encode(self, img, learn: bool = False, S: float = 0.5) -> np.ndarray:
+        """Forward : image → feature map L1 → L2 convolutif → signature creuse."""
+        F, gh, gw = self._feature_map_l1(img, learn)
+        L2 = self._encode_l2_conv(F, gh, gw, learn)
+        # signature = [L1 agrégé (somme des positions), L2 agrégé (somme des positions)]
+        z1 = F.sum(axis=(0, 1))
+        z2 = L2.sum(axis=(0, 1))
+        z1 = z1 / (np.linalg.norm(z1) + 1e-8)
+        z2 = z2 / (np.linalg.norm(z2) + 1e-8)
+        sig = np.concatenate([z1, z2])
+        return sig / (np.linalg.norm(sig) + 1e-8)
 
 
 def soft_wta(activations: np.ndarray, temperature: float = 1.0,
