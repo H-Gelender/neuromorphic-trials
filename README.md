@@ -148,7 +148,8 @@ recherche-agi/
 │   ├── mnist_neuromodulated.ipynb      # boucle neuromodulée (plasticité par surprise)
 │   ├── mnist_neuromodulated_loop.ipynb # boucle neuromodulée COMPLÈTE branchée
 │   ├── mnist_local_ssm.ipynb           # SSM local (intégration temporelle sous chaque nœud)
-│   └── mnist_sensory_bundle.ipynb      # fourre-tout sensoriel (image, texte, signal)
+│   ├── mnist_sensory_bundle.ipynb      # fourre-tout sensoriel (image, texte, signal)
+│   └── mnist_multimodal_context.ipynb  # couplage vision + langage (image + label texte)
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
 │   ├── enhanced_reservoir.py          # réservoir amélioré (rétine, multi-axe, compétition)
@@ -669,6 +670,78 @@ signature du système :
 3. Le fourre-tout est **intégré** : image → encodeur WTA → système (réservoir/PC/
    décodage). Il est **scalable** aux autres modalités (texte, signal) via le même
    mécanisme d'encodeur Hebbien.
+
+## Effet de la taille de patch
+
+On teste l'encodeur seul avec différentes tailles de patch (compromis **résolution
+spatiale vs primitives locales**) :
+
+| Patch | d_in | # patches | Signature | Test acc |
+|---|---|---|---|---|
+| **7×7** | 49 | 16 | 512 dims | **0.747** |
+| 14×14 | 196 | 4 | 128 dims | 0.320 |
+| 28×28 | 784 | 1 | 32 dims | 0.100 |
+
+### Commentaire
+1. **Plus le patch est petit, mieux c'est** : patch 7 → 0.747, patch 28 → 0.100.
+2. **Petit patch** = beaucoup de patches (16) → la concaténation préserve la
+   **structure spatiale** + l'encodeur capture des **primitives locales fines**
+   (traits, courbes).
+3. **Grand patch** (28 = image entière) = 1 seul patch → pas de résolution
+   spatiale, et le WTA sur l'image entière éteint tout sauf 1 filtre → 0.100.
+4. Cohérent avec la **vision biologique** : le champ récepteur local (petit) est
+   essentiel (les V1 ont de petits champs récepteurs).
+5. **Patch 7×7 = meilleur compromis** (0.747).
+
+## Confirmation : encodeur seul vs système complet
+
+| Approche | Test acc |
+|---|---|
+| **Encodeur seul + couche lue** | **0.747** |
+| Système complet (PC + tuyaux) | ~0.25 |
+
+**Confirmé** : l'encodeur seul bat nettement le système complet. Le maillon faible
+est le **mécanisme de tuyaux** du PC (seuil de nouveauté qui regroupe les classes).
+Le décodage direct (couche lue) est bien supérieur — c'est une conclusion
+scientifique importante du projet.
+
+---
+
+# 🧠 Couplage multi-sensoriel — vision + langage
+
+Le notebook `notebooks/mnist_multimodal_context.ipynb` couple **l'image MNIST** et
+son **label en texte** (`zero`, `one`...) pour démontrer le **couplage de plusieurs
+sens** dans le fourre-tout sensoriel.
+
+```
+[ Image ] → Encodeur WTA → latent image ──┐
+                                          ├── fusion → couche lue → classification
+[ texte ] → Embeddings   → latent texte ──┘
+```
+
+## Résultats mesurés (test acc)
+| Modalité | Sig | Test acc |
+|---|---|---|
+| **Image seule** | 512 dims | 0.640 |
+| Texte seul (label) | 128 dims | 1.000 |
+| **Fusion image+texte** | 640 dims | **1.000** |
+
+## Le texte contextuel corrige la vision
+- **Vision seule** : 0.640 (72 erreurs sur 200)
+- **Fusion image+texte** : 1.000
+- **72/72 erreurs de vision corrigées** par le texte contextuel (figure de vérification)
+
+## Commentaire
+1. Le **texte du label** donne une classification parfaite (1.000) : c'est attendu,
+   il contient la réponse — c'est une **démonstration du couplage** vision+langage.
+2. Le texte **contextuel corrige les ambiguïtés** de la vision : 72/72 erreurs
+   visuelles résolues par la fusion.
+3. Le fourre-tout couple bien les sens : image → encodeur WTA, texte → embeddings,
+   **fusion → décodage**.
+4. **Limite méthodologique honnête** : le label exact dans le texte rend la
+   classification triviale. Pour un vrai gain, il faudrait un texte contextuel
+   **partiel** (ex. "chiffre rond" pour 0/6/8) qui aide sans trancher — une piste
+   pour la suite.
 
 ## Résultats mesurés
 - **Couche lue sur z synaptique** : train 0.453 / test 0.393 (signature 64 dims
