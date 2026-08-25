@@ -151,7 +151,8 @@ recherche-agi/
 │   ├── mnist_sensory_bundle.ipynb      # fourre-tout sensoriel (image, texte, signal)
 │   ├── mnist_multimodal_context.ipynb  # couplage vision + langage (image + label texte)
 │   ├── mnist_fewshot_pretrain.ipynb    # pré-entraînement few-shot + gel anti-oubli
-│   └── mnist_unsupervised.ipynb        # classification 100% non supervisée (neurones d'ancrage)
+│   ├── mnist_unsupervised.ipynb        # classification 100% non supervisée (neurones d'ancrage)
+│   └── mnist_topdown_recall.ipynb      # rappel top-down (régénération + résonance)
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
 │   ├── enhanced_reservoir.py          # réservoir amélioré (rétine, multi-axe, compétition)
@@ -833,6 +834,62 @@ L'**étiquetage est une observation a posteriori** : on observe quel neurone ré
 3. **Coût** : la non-supervision coûte ~25 points (0.75 supervisé → 0.49), mais
    le système ne voit **aucune étiquette** pendant l'apprentissage — c'est le
    **paradigme autonome** recherché.
+
+---
+
+# 🔄 Rappel Top-Down — régénérer l'image + écrire le mot
+
+Le notebook `notebooks/mnist_topdown_recall.ipynb` fait l'**inverse de la
+perception** : projeter un état abstrait vers le bas pour régénérer la forme
+brute, sans réseau complexe.
+
+## 1. Régénérer l'image (décodage top-down)
+```
+[ Neurone d'Ancrage du 1 ] (activation forcée 1.0)
+      │  × W_anchor
+      ▼
+[ Vecteur Latent Reconstruit ẑ ] (512 dims)
+      │  × W_encoder^T (rétro-projection)
+      ▼
+[ Image Synthétique Régénérée (28x28) ]
+```
+
+## 2. Écrire le mot (association croisée / résonance)
+```
+Phase apprentissage : [image] + [texte "un"] → neurone lie les deux
+Phase rappel      : [image seule] → neurone s'allume → sort le texte "un"
+```
+
+## Résultats mesurés
+**Régénération d'image** : la rétro-projection $W_{enc}^T$ régénère une forme
+**reconnaissable** (structure préservée, bruitée) — figure de vérification.
+
+**Association visuel→texte** (résonance, mots en français) :
+| Chiffre | Texte rappelé | Correct ? |
+|---|---|---|
+| 0 | zéro | ✓ |
+| 1 | un | ✓ |
+| 2 | cinq | ✗ |
+| 3 | trois | ✓ |
+| 4 | quatre | ✓ |
+| 5 | trois | ✗ |
+| 6 | zéro | ✗ |
+| 7 | sept | ✓ |
+| 8 | un | ✗ |
+| 9 | neuf | ✓ |
+
+**6/10 rappels corrects** — la résonance fonctionne. Les erreurs (2↔5, 6↔0)
+viennent de neurones d'ancrage qui regroupent des chiffres visuellement proches
+(pureté des clusters ~0.5).
+
+## Commentaire honnête
+1. Le système fait l'**inverse de la perception** sans réseau complexe :
+   activation d'un neurone → régénération (W_enc^T) + résonance texte.
+2. Le décodage est **imparfait** (image bruitée, certains rappels faux) car la
+   rétro-projection transposée n'est pas un vrai inverse génératif, et les
+   clusters sont imparfaits.
+3. C'est la boucle **perception → abstraction → régénération**, entièrement
+   non supervisée.
 
 ## Résultats mesurés
 - **Couche lue sur z synaptique** : train 0.453 / test 0.393 (signature 64 dims

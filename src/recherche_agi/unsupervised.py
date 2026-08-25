@@ -159,3 +159,73 @@ class AnchorNeurons:
         for i, cnt in self.labels_seen.items():
             out[i] = max(cnt.items(), key=lambda x: x[1])[0]
         return out
+
+    # ------------------------------------------------------------------ #
+    # RAPPEL TOP-DOWN GÉNÉRATIF (inverse de la perception)
+    # ------------------------------------------------------------------ #
+    def reconstruct_latent(self, neuron_idx: int) -> np.ndarray:
+        """Régénère le latent ẑ à partir d'un neurone d'ancrage activé.
+
+        Activer le neurone i (one-hot) → projeter par W_anchor :
+            ẑ = W_anchor[i]   (le poids du neurone est déjà un prototype latent)
+        """
+        return self.W[neuron_idx].copy()
+
+    def reconstruct_image(self, neuron_idx: int, enc_W: np.ndarray,
+                          patch_size: int = 7, img_shape: tuple = (28, 28)
+                          ) -> np.ndarray:
+        """Régénère une image depuis un neurone d'ancrage (rétro-projection).
+
+        ẑ = W_anchor[i]  (prototype latent, 512 dims)
+        → déconcatène en latents de patches (32 dims chacun)
+        → rétro-projection par W_enc^T vers l'espace des patches
+        → reconstruit l'image 28x28 par blocs.
+
+        enc_W : matrice de l'encodeur WTA (d_out x d_in) = (32, 49).
+        """
+        z_hat = self.reconstruct_latent(neuron_idx)
+        d_lat = enc_W.shape[0]                 # 32 (latent par patch)
+        n_patches = z_hat.shape[0] // d_lat    # 512/32 = 16 patches
+        gh = gw = int(np.sqrt(n_patches))      # 4x4 patches
+
+        # rétro-projeter chaque latent de patch vers le patch d'origine
+        patch_h = patch_w = patch_size
+        img = np.zeros(img_shape)
+        for idx in range(n_patches):
+            z_p = z_hat[idx*d_lat:(idx+1)*d_lat]
+            # pseudo-inverse / transposée : patch ≈ W_enc^T · z_p
+            patch = enc_W.T @ z_p
+            patch = patch - patch.min()        # normaliser par patch
+            pmax = patch.max()
+            if pmax > 0:
+                patch = patch / pmax
+            i, j = idx // gw, idx % gw
+            img[i*patch_h:(i+1)*patch_h, j*patch_w:(j+1)*patch_w] = patch.reshape(patch_h, patch_w)
+        return img
+
+    # -- association croisée visuel -> texte (résonance hebbienne) -- #
+    def associate_text(self, neuron_idx: int, text_latent: np.ndarray,
+                       alpha: float = 0.1) -> None:
+        """Lie un latent textuel au neurone d'ancrage (mémoire associative).
+
+        Phase d'apprentissage : le neurone i est co-activé avec le texte.
+        La composante textuelle est mémorisée par moyennage hebbien.
+        """
+        tl = np.asarray(text_latent, dtype=float)
+        tl = tl / (np.linalg.norm(tl) + 1e-8)
+        if not hasattr(self, 'text_mem'):
+            self.text_mem = {}   # neurone -> (somme, compteur)
+        if neuron_idx not in self.text_mem:
+            self.text_mem[neuron_idx] = (np.zeros_like(tl), 0)
+        s, c = self.text_mem[neuron_idx]
+        self.text_mem[neuron_idx] = (s + alpha * tl, c + 1)
+
+    def recall_text(self, neuron_idx: int) -> np.ndarray | None:
+        """Rappelle le texte associé au neurone (résonance, lecture W_texte)."""
+        if not hasattr(self, 'text_mem') or neuron_idx not in self.text_mem:
+            return None
+        s, c = self.text_mem[neuron_idx]
+        if c == 0:
+            return None
+        lat = s / c
+        return lat / (np.linalg.norm(lat) + 1e-8)
