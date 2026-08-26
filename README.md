@@ -80,7 +80,9 @@ recherche-agi/
 │   ├── mnist_mode_collapse.ipynb       # mode collapse + domination densité
 │   ├── mnist_focus_iterative.ipynb     # méthode itérative avec FOCUS (accuracy)
 │   ├── mnist_coco_scale.ipynb          # scale vers COCO Stuff (classe par classe)
-│   └── mnist_coco_texture.ipynb        # COCO : texture + couleur (au lieu pixels gris)
+│   ├── mnist_coco_texture.ipynb        # COCO : texture + couleur (au lieu pixels gris)
+│   ├── mnist_coco_recon.ipynb          # reconstruction image réelle vs modèle
+│   └── mnist_coco_evolutive.ipynb      # entraînement évolutif (neurogenèse + couches)
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
 │   ├── unsupervised.py                # AnchorNeurons, WTA, fatigue, co-activation,
@@ -89,6 +91,10 @@ recherche-agi/
 │   ├── coco_pipeline.py               # entraînement COCO classe par classe
 │   ├── coco_scenes.py                 # scènes COCO (classes, palette, construction)
 │   ├── texture_features.py            # caractéristiques couleur + texture
+│   ├── online_training.py             # callback d'équilibre (ΔW/ΔS/ΔD) + arrêt 1h
+│   ├── evolutive_coco.py              # entraînement évolutif (neurogenèse + couches)
+│   ├── visualize.py                   # visuels architecture + évolution
+│   ├── visualize_coco_images.py       # visuels images COCO claires
 │   └── training.py                    # entraînement auxiliaire (référence)
 └── README.md
 ```
@@ -613,3 +619,33 @@ Au lieu des pixels gris bruts, on extrait des **caractéristiques couleur + text
 => Le scale vers COCO est **VIABLE** avec les bonnes caractéristiques : couleur
 + texture au lieu des pixels bruts. C'est la clé pour les classes stuff
 (matériaux/étendues) vs les formes (chiffres).
+
+---
+
+# 🧬 Entraînement COCO évolutif (neurogenèse + cycle respiratoire)
+
+Le notebook `notebooks/mnist_coco_evolutive.ipynb` fait **évoluer l'architecture**
+pendant l'entraînement (le comportement attendu) :
+- **Neurogenèse** : ajoute des neurones quand la surprise est élevée
+- **Cycle respiratoire** : gèle C1 et ajoute des couches quand l'oscillation apparaît
+
+## Résultats (features COCO, 55 classes)
+| Métrique | Initial | Final |
+|---|---|---|
+| **Neurones** (neurogenèse) | 11 | **970** |
+| **Couches** (cycle respiratoire) | 1 | **2** |
+| Phase | exploration | **consolidation** (C1 gelée) |
+| Accuracy (échantillon) | — | 0.425 |
+
+## Comportement démontré
+1. **Le modèle CROÎT** : 11 → 970 neurones (la surprise élevée crée de nouveaux
+   neurones via la neurogenèse).
+2. **Le modèle AJOUTE une couche** : 1 → 2 (le cycle respiratoire gèle C1 et
+   déploie C2 quand l'oscillation structurelle apparaît).
+3. **L'architecture évolue réellement** pendant l'entraînement — contrairement
+   aux versions précédentes où le nombre de neurones/couches était fixe.
+
+## Note sur les données
+- Le **goulot n'est pas le calcul mais le réseau** : ~21 s/image en streaming HF.
+- Solution : **cacher le set de validation en bloc** (5 000 images, bien moins
+  que les 164K du train) pour un accès local instantané.

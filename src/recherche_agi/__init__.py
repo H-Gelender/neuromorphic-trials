@@ -23,6 +23,7 @@ from .online_training import EquilibriumCallback
 from .visualize import visualize_architecture, visualize_evolution, visualize_input
 from .visualize_coco_images import (colormap_mask, visualize_coco_sample,
                                     visualize_patches_rgb)
+from .evolutive_coco import EvolutiveCOCO
 
 __all__ = [
     # scènes COCO (prototype de scale)
@@ -42,6 +43,8 @@ __all__ = [
     "colormap_mask",
     "visualize_coco_sample",
     "visualize_patches_rgb",
+    # entraînement évolutif COCO
+    "EvolutiveCOCO",
     # pipeline COCO classe par classe
     "train_class_by_class",
     "classify_patch",
