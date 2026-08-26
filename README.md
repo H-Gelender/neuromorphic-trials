@@ -713,3 +713,38 @@ Le rapport affiche 4 panneaux :
 Le débit est élevé (~60K patches/s) car on utilise les **features en local**
 (plus de réseau) — le calcul NumPy sur CPU mono-thread reste le facteur limitant
 (22 cœurs inutilisés).
+
+---
+
+# 🏃 Entraînement long + monitoring temps réel
+
+On a lancé l'entraînement long **classe par classe** sur les 171 classes
+validation (1 174 563 features) en tâche de fond, avec **monitoring temps réel**
+via un log JSON mis à jour en direct.
+
+## Compte rendu de l'entraînement long (CPU, 8.5 min)
+| Métrique | Valeur |
+|---|---|
+| **Images passées** | 171 |
+| **Patches traités** | 1 174 563 |
+| **Patches/image (moy)** | 6 869 |
+| **Temps/image (moy)** | 2.94 s |
+| **Temps total CPU** | **507 s (8.5 min)** |
+| **Débit** | 0.34 img/s · 2 315 patches/s |
+| **Neurones finaux** | 400 (11 → 400) |
+| **Couches** | 2 (+1 archivée) |
+| **Poids totaux** | 14 000 |
+| **Accuracy** | 0.006 |
+
+## Monitoring temps réel
+Pendant l'entraînement, le log (`live_log.json`) se met à jour en direct :
+classes traitées, patches, temps, neurones, couches, accuracy — lisible à tout
+moment.
+
+## Constat honnête
+1. **Le monitoring temps réel fonctionne** : on suit l'avancement en direct.
+2. **La neurogenèse sature** à 400 neurones très vite (dès le début) — la
+   capacité est atteinte rapidement sur 171 classes.
+3. **L'accuracy reste faible (0.006)** : classer 171 classes stuff avec 400
+   neurones et des features de texture brutes est très difficile. C'est un
+   résultat à améliorer (plus de neurones, meilleures features, hiérarchie).
