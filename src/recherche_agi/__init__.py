@@ -19,6 +19,10 @@ from .unsupervised import (AnchorNeurons, DynamicAnchorNeurons, dynamic_k,
 from .stable_layers import RespiratoryController, StructuralActivitySignal
 from .coco_pipeline import accuracy_per_class, classify_patch, train_class_by_class
 from .texture_features import color_texture_features, extract_all_features
+from .online_training import EquilibriumCallback
+from .visualize import visualize_architecture, visualize_evolution, visualize_input
+from .visualize_coco_images import (colormap_mask, visualize_coco_sample,
+                                    visualize_patches_rgb)
 
 __all__ = [
     # scènes COCO (prototype de scale)
@@ -28,6 +32,16 @@ __all__ = [
     # caractéristiques de texture/couleur
     "color_texture_features",
     "extract_all_features",
+    # entraînement en ligne + callback d'équilibre
+    "EquilibriumCallback",
+    # visualisation
+    "visualize_architecture",
+    "visualize_evolution",
+    "visualize_input",
+    # visualisation images COCO claires
+    "colormap_mask",
+    "visualize_coco_sample",
+    "visualize_patches_rgb",
     # pipeline COCO classe par classe
     "train_class_by_class",
     "classify_patch",
