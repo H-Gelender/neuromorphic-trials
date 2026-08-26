@@ -68,7 +68,8 @@ recherche-agi/
 │   ├── mnist_drift_test.ipynb          # anti-oubli catastrophique (drift 0/1 → 2-9)
 │   ├── mnist_physarum_pruning.ipynb    # élagage Physarum résout le goulot
 │   ├── mnist_global_accuracy.ipynb     # acc globale après drift (test 0-9)
-│   └── mnist_neurogenesis.ipynb        # neurogenèse dynamique + couche Hebbienne
+│   ├── mnist_neurogenesis.ipynb        # neurogenèse dynamique + couche Hebbienne
+│   └── mnist_two_layers_viz.ipynb      # deux couches + visualisation en images
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
 │   ├── unsupervised.py                # AnchorNeurons, WTA, fatigue, co-activation,
@@ -166,3 +167,28 @@ Physarum), pas de la tester seule — le comportement biologique du cerveau :
    neurogenèse croît de 5 automatiquement) — le système est **autonome**.
 4. C'est le vrai comportement biologique : **neurogenèse + élagage synaptique** =
    adaptation continue du réservoir.
+
+---
+
+# 🖼️ Deux couches de neurones — résultats + visualisation
+
+Le notebook `notebooks/mnist_two_layers_viz.ipynb` ajoute une **couche Hebbienne**
+connectée au système combiné, et **visualise en images les deux couches**.
+
+## Résultats
+| Couche | Acc globale |
+|---|---|
+| Couche 1 seule (neurogenèse + élagage) | **0.946** |
+| Couche 1 → couche 2 (Hebbienne) | 0.300 |
+
+La couche 2 **ne dépasse pas** la couche 1 seule : la représentation d'entrée
+(activations de la couche 1) n'est pas assez discriminante, et l'élagage Physarum
+déplace les neurones de la couche 1 → l'entrée de la couche 2 bouge.
+
+## Visualisation (2 figures)
+1. **Couche 1** : prototypes en **images** (784 = 28×28), par classe dominante —
+   reconnaissables (0-9).
+2. **Couche 2** : poids dans l'espace d'activation (60 dims, affichés en 8×8) —
+   patterns d'activation appris.
+
+Le meilleur reste la couche 1 (`predict_label`) sur le système combiné.
