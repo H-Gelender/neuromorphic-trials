@@ -67,7 +67,8 @@ recherche-agi/
 │   ├── mnist_unsupervised.ipynb        # base : neurones d'ancrage 100% non supervisé
 │   ├── mnist_drift_test.ipynb          # anti-oubli catastrophique (drift 0/1 → 2-9)
 │   ├── mnist_physarum_pruning.ipynb    # élagage Physarum résout le goulot
-│   └── mnist_global_accuracy.ipynb     # acc globale après drift (test 0-9)
+│   ├── mnist_global_accuracy.ipynb     # acc globale après drift (test 0-9)
+│   └── mnist_neurogenesis.ipynb        # neurogenèse dynamique + couche Hebbienne
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
 │   ├── unsupervised.py                # AnchorNeurons, WTA, fatigue, co-activation,
@@ -93,3 +94,45 @@ cd C:/Users/henry/Desktop/workspace/recherche-agi
 3. **L'élagage Physarum** est le levier décisif : il gère la contrainte de
    ressources en atrophiant les neurones inutiles, portant l'acc globale de 0.62
    à 0.95.
+
+---
+
+# 🧬 Neurogenèse dynamique + couche Hebbienne
+
+Le notebook `notebooks/mnist_neurogenesis.ipynb` ajoute deux mécanismes.
+
+## 1. Neurogenèse dynamique
+On part d'un **petit groupe de neurones** (5), et selon la **surprise** (motif
+inconnu), on **augmente le nombre de neurones** (croissance adaptative).
+
+| Seuil | Neurones (5 →) | Acc globale |
+|---|---|---|
+| 0.3 | 200 (plafond) | 0.595 |
+| **0.5** | 194 | **0.620** |
+| 0.7 | 118 | 0.555 |
+
+Croissance détaillée (seuil 0.5) : 5 → 46 (après 0/1) → 67, 86, 105... → **194**
+(après 9). L'acc finale 0.62 est comparable au drift sans élagage — la
+neurogenèse gère sa capacité par croissance pure (sans réutiliser les ressources).
+
+## 2. Couche Hebbienne connectée à la couche 1
+Une 2e couche (SOM Hebbien) reçoit les activations de la couche 1 et classifie.
+
+| Représentation d'entrée | Acc (couche 1 → 2) |
+|---|---|
+| Couche 1 seule (référence) | **0.620** |
+| Activation brute (padding) | 0.415 |
+| One-hot du gagnant | 0.115 |
+| Top-k des similarités | 0.038 |
+
+## Analyse honnête
+1. La **neurogenèse seule fonctionne** (croissance pilotée par la surprise, acc 0.62).
+2. La **couche 2 Hebbienne dégrade** (0.04-0.42 vs 0.62), quelle que soit la
+   représentation d'entrée.
+3. **Causes** : la **dimension dynamique** de la neurogenèse (les neurones
+   grossissent) rend l'entrée de la couche 2 instable (padding/one-hot), et la
+   couche 1 classifie déjà directement — la couche 2 dilue au lieu d'affiner.
+
+=> La neurogenèse est une bonne **croissance adaptative**, mais connecter une
+couche Hebbienne par-dessus ne s'améliore pas dans cette architecture — le frein
+est la dimension dynamique.

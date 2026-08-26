@@ -12,8 +12,9 @@ Modules conservés :
 - training.py     : entraînement auxiliaire (gardé pour référence)
 """
 from .data import filter_by_digits, load_mnist
-from .unsupervised import (AnchorNeurons, dynamic_k, homeostatic_threshold,
-                           image_to_patches, topdown_feedback)
+from .unsupervised import (AnchorNeurons, DynamicAnchorNeurons, dynamic_k,
+                           homeostatic_threshold, image_to_patches,
+                           topdown_feedback)
 
 __all__ = [
     # données
@@ -21,6 +22,7 @@ __all__ = [
     "load_mnist",
     # classification non supervisée
     "AnchorNeurons",
+    "DynamicAnchorNeurons",
     "dynamic_k",
     "homeostatic_threshold",
     "image_to_patches",

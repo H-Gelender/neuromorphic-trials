@@ -126,7 +126,7 @@ class AnchorNeurons:
         """WTA dynamique : les k neurones les plus actifs."""
         a = self.activate(z)
         idx = np.argsort(-a)[:k]
-        out = np.zeros(self.n_neurons)
+        out = np.zeros(len(self.W))
         out[idx] = a[idx]
         return out
 
@@ -162,7 +162,7 @@ class AnchorNeurons:
                 self.co_act[idx[j_j], idx[i_i]] += 1.0
 
         # retour : vecteur d'activation (creux) = signature non supervisée
-        out = np.zeros(self.n_neurons)
+        out = np.zeros(len(self.W))
         out[idx] = a[idx]
         return out
 
@@ -322,3 +322,88 @@ class AnchorNeurons:
         return {'S_auto_history': hist, 'latent_final': z_cur,
                 'S_auto_initial': hist[0] if hist else None,
                 'S_auto_final': hist[-1] if hist else None}
+
+
+# --------------------------------------------------------------------------- #
+# NEUROGENÈSE DYNAMIQUE — croissance des neurones selon la surprise
+# --------------------------------------------------------------------------- #
+class DynamicAnchorNeurons(AnchorNeurons):
+    """AnchorNeurons avec NEUROGENÈSE DYNAMIQUE.
+
+    On part d'un PETIT groupe de neurones. À chaque entrée, si la SURPRISE
+    (distance au neurone le plus proche, seuillée par la fatigue) dépasse un
+    seuil de nouveauté, on AJOUTE un nouveau neurone (croissance adaptative).
+
+    La neurogenèse est pilotée par la surprise : quand le système rencontre un
+    motif inconnu (grande surprise), il crée de la capacité au lieu de rester
+    saturé. C'est une alternative à l'élagage Physarum (croissance vs atrophie).
+
+    Paramètres :
+    - n_init : nombre initial de neurones (petit groupe)
+    - novelty_threshold : seuil de surprise au-delà duquel on neurogénère
+    - max_neurons : plafond de croissance (sécurité)
+    """
+
+    def __init__(self, d_in: int, n_init: int = 5, seed: int = 0, lr: float = 0.1,
+                 use_homeostasis: bool = True, novelty_threshold: float = 0.5,
+                 max_neurons: int = 200):
+        super().__init__(d_in=d_in, n_neurons=n_init, seed=seed, lr=lr,
+                         use_homeostasis=use_homeostasis)
+        self.novelty_threshold = novelty_threshold
+        self.max_neurons = max_neurons
+        self.growth_history = []          # évolution du nombre de neurones
+        self.surprise_history = []        # surprise à chaque entrée
+
+    def _surprise(self, z: np.ndarray) -> float:
+        """Surprise = distance au neurone le plus proche (1 - similarité max)."""
+        z = np.asarray(z, dtype=float)
+        zn = z / (np.linalg.norm(z) + 1e-8)
+        sim = self.W @ zn                 # similarité cosinus
+        sim = sim - self.theta            # fatigue : seuil adaptatif
+        best = sim.max() if sim.size else 0.0
+        return max(0.0, 1.0 - best)
+
+    def _grow(self, z: np.ndarray, label: int = None) -> int:
+        """Neurogenèse : ajoute un nouveau neurone initialisé vers z.
+
+        Retourne l'index du nouveau neurone.
+        """
+        if len(self.W) >= self.max_neurons:
+            return -1
+        # nouveau prototype positionné vers l'entrée surprenante
+        z = np.asarray(z, dtype=float)
+        zn = z / (np.linalg.norm(z) + 1e-8)
+        new_w = zn.copy()
+        # étendre toutes les matrices
+        self.W = np.vstack([self.W, new_w[None, :]])
+        self.theta = np.append(self.theta, 0.0)
+        self.activations = np.append(self.activations, 0.0)
+        # étendre co_act (connexions neuromorphiques)
+        n = self.W.shape[0]
+        co = np.zeros((n, n))
+        co[:n-1, :n-1] = self.co_act
+        self.co_act = co
+        new_idx = n - 1
+        if label is not None:
+            self.labels_seen.setdefault(new_idx, {})[int(label)] = 0
+        return new_idx
+
+    def learn(self, z: np.ndarray, k: int = 1, label: int = None) -> np.ndarray:
+        """Apprend avec neurogenèse : surprise élevée → nouveau neurone.
+
+        Si la surprise dépasse le seuil, on crée un neurone (au lieu de forcer
+        un neurone existant à s'adapter). Sinon, apprentissage normal.
+        """
+        S = self._surprise(z)
+        self.surprise_history.append(S)
+        if S > self.novelty_threshold:
+            self._grow(z, label)
+        # apprentissage normal sur le pool (grossi), k borné au nb de neurones
+        k = min(k, len(self.W))
+        out = super().learn(z, k=k, label=label)
+        self.growth_history.append(len(self.W))
+        return out
+
+    @property
+    def n_neurons_current(self) -> int:
+        return len(self.W)
