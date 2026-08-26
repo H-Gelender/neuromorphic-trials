@@ -79,7 +79,8 @@ recherche-agi/
 │   ├── mnist_respiratory_test.ipynb    # test du cycle sur MNIST (IoU + bounding boxes)
 │   ├── mnist_mode_collapse.ipynb       # mode collapse + domination densité
 │   ├── mnist_focus_iterative.ipynb     # méthode itérative avec FOCUS (accuracy)
-│   └── mnist_coco_scale.ipynb          # scale vers COCO Stuff (classe par classe)
+│   ├── mnist_coco_scale.ipynb          # scale vers COCO Stuff (classe par classe)
+│   └── mnist_coco_texture.ipynb        # COCO : texture + couleur (au lieu pixels gris)
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
 │   ├── unsupervised.py                # AnchorNeurons, WTA, fatigue, co-activation,
@@ -87,6 +88,7 @@ recherche-agi/
 │   ├── stable_layers.py               # cycle respiratoire (S(t), gel, spawning, dégel)
 │   ├── coco_pipeline.py               # entraînement COCO classe par classe
 │   ├── coco_scenes.py                 # scènes COCO (classes, palette, construction)
+│   ├── texture_features.py            # caractéristiques couleur + texture
 │   └── training.py                    # entraînement auxiliaire (référence)
 └── README.md
 ```
@@ -577,3 +579,37 @@ Détection avec focus : les objets sont détectés, house est correctement class
 
 => Le scale vers COCO révèle la limite réelle : l'hétérogénéité intra-classe
 des classes stuff, pas la capacité du pipeline classe par classe.
+
+---
+
+# 🎨 COCO Stuff : caractéristiques de TEXTURE + COULEUR
+
+Le notebook `notebooks/mnist_coco_texture.ipynb` corrige le vrai problème :
+on ne voyait **rien** sur les patches en **niveaux de gris** (et le modèle non
+plus). Les classes stuff COCO sont des **textures** (ciel, neige, route, herbe)
+qui ne se distinguent pas par la forme mais par la **couleur** et la **texture**.
+
+## Correction
+Au lieu des pixels gris bruts, on extrait des **caractéristiques couleur + texture** :
+- **Couleur** : moyennes + écarts R,G,B, histogrammes de couleurs
+- **Texture** : gradient moyen, variance/contraste, co-occurrence
+
+## Résultats (classe par classe)
+| Classe | Pixels gris | **Texture+couleur** |
+|---|---|---|
+| house | 0.979 | 0.82-0.91 |
+| sky | 0.242 | **0.74-0.77** |
+| snow | 0.040 | **0.65-0.69** |
+| railing | 0.167 | **0.70** |
+| **Moyenne** | **0.357** | **0.68-0.70** |
+
+## Analyse
+1. L'accuracy passe de **~0.36 (pixels gris)** à **~0.68-0.70 (texture+couleur)**.
+2. Le diagnostic était juste : les classes stuff sont des **textures** et la
+   **couleur** est discriminante (ciel bleu, herbe verte, route grise).
+3. Les caractéristiques (moyennes RGB, histogrammes, gradients, contraste)
+   portent l'information que les pixels gris bruts avaient perdue.
+
+=> Le scale vers COCO est **VIABLE** avec les bonnes caractéristiques : couleur
++ texture au lieu des pixels bruts. C'est la clé pour les classes stuff
+(matériaux/étendues) vs les formes (chiffres).
