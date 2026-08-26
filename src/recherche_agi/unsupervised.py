@@ -24,7 +24,25 @@ from __future__ import annotations
 import numpy as np
 
 __all__ = ["AnchorNeurons", "dynamic_k", "homeostatic_threshold",
-           "topdown_feedback"]
+           "topdown_feedback", "image_to_patches"]
+
+
+def image_to_patches(img: np.ndarray, patch_size: int = 7) -> np.ndarray:
+    """Découpe une image en patches (champ récepteur local)."""
+    img = np.asarray(img).squeeze()
+    h, w = img.shape
+    lo, hi = img.min(), img.max()
+    img01 = (img - lo) / (hi - lo + 1e-8)
+    ph = pw = patch_size
+    pad_h = (ph - h % ph) % ph
+    pad_w = (pw - w % pw) % pw
+    img_p = np.pad(img01, ((0, pad_h), (0, pad_w)))
+    gh, gw = img_p.shape[0] // ph, img_p.shape[1] // pw
+    patches = []
+    for i in range(gh):
+        for j in range(gw):
+            patches.append(img_p[i*ph:(i+1)*ph, j*pw:(j+1)*pw].flatten())
+    return np.array(patches)
 
 
 def topdown_feedback(z: np.ndarray, prediction: np.ndarray, beta: float = 1.0
