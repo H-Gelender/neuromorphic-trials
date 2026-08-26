@@ -72,7 +72,8 @@ recherche-agi/
 │   ├── mnist_two_layers_viz.ipynb      # deux couches + visualisation en images
 │   ├── mnist_feedback_topdown.ipynb    # rétroaction top-down (couche 2 → couche 1)
 │   ├── mnist_threshold_wta_patches.ipynb # WTA par seuil + découpage image
-│   └── mnist_multidigit_detection.ipynb # détection multi-chiffres (stride + bounding box)
+│   ├── mnist_multidigit_detection.ipynb # détection multi-chiffres (stride + bounding box)
+│   └── mnist_reconstruction_detection.ipynb # reconstruction image + 2 scores (IoU & count)
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
 │   ├── unsupervised.py                # AnchorNeurons, WTA, fatigue, co-activation,
@@ -311,3 +312,46 @@ classification par chiffre.
 
 Le pipeline de **détection multi-chiffres** est opérationnel ; sa précision dépend
 de la discrimination du classifieur en amont.
+
+---
+
+# 🖼️ Reconstruction de l'image + bounding boxes + 2 scores
+
+Le notebook `notebooks/mnist_reconstruction_detection.ipynb` change d'approche :
+au lieu d'un **décodeur**, on **recrée l'image globale** par les **prototypes**
+des neurones (auto-encodage non supervisé), puis on fait des **bounding boxes**
+sur l'image recréée. **2 scores distincts** : IoU (segmentation) + nombre de
+boxes (comptage). Scènes avec **1 chiffre + patches noirs**.
+
+## Pipeline
+```
+[ Image 1 chiffre + patches noirs ]
+   → reconstruction (prototypes des neurones, rejet du fond)
+   → bounding boxes (segmentation par énergie)
+   → Score IoU + Score de nombre de boxes
+```
+
+## Résultats (10 chiffres, 1 box attendue)
+| Chiffre | IoU | Count |
+|---|---|---|
+| 0 | 0.54 | 1.00 |
+| 1 | 0.55 | 1.00 |
+| 2 | 0.57 | 1.00 |
+| 3 | 0.54 | 1.00 |
+| 4 | 0.43 | 1.00 |
+| 5 | 0.86 | 1.00 |
+| 6 | 0.68 | 1.00 |
+| 7 | 0.50 | 1.00 |
+| 8 | 0.48 | 1.00 |
+| 9 | 0.39 | 1.00 |
+| **MOYENNE** | **0.553** | **1.000** |
+
+## Les 2 scores distincts
+1. **Score IoU** (qualité segmentation) : 0.553 en moyenne — chevauchement entre
+   la box prédite et la vérité (la reconstruction étale un peu le chiffre).
+2. **Score de nombre de boxes** (comptage) : **1.000** — le système détecte
+   exactement 1 box pour 1 chiffre, les **patches noirs sont ignorés** (rejet par
+   seuil de similarité lors de la reconstruction).
+
+=> Le **comptage est parfait**, la **segmentation (IoU)** est correcte (>0.5 sur
+la plupart des chiffres) mais imparfaite à cause de la reconstruction bruitée.
