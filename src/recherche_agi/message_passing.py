@@ -15,17 +15,23 @@ Le graphe est une grille (chaque nœud = un patch), N(i) = 4-voisins.
 import numpy as np
 
 
-def build_grid_adjacency(gh, gw):
-    """Construit la liste d'adjacence d'une grille gh x gw (4-voisins)."""
-    n = gh * gw
+def build_grid_adjacency(gh, gw, n=None):
+    """Construit la liste d'adjacence d'une grille gh x gw (4-voisins).
+
+    n : nombre réel de nœuds (si < gh*gw, les nœuds au-delà sont ignorés).
+    """
+    if n is None:
+        n = gh * gw
     adj = [[] for _ in range(n)]
     for i in range(gh):
         for j in range(gw):
             idx = i * gw + j
-            if i > 0: adj[idx].append((i-1)*gw + j)
-            if i < gh-1: adj[idx].append((i+1)*gw + j)
-            if j > 0: adj[idx].append(i*gw + j-1)
-            if j < gw-1: adj[idx].append(i*gw + j+1)
+            if idx >= n:
+                continue
+            if i > 0 and idx - gw < n: adj[idx].append(idx - gw)
+            if i < gh-1 and idx + gw < n: adj[idx].append(idx + gw)
+            if j > 0 and idx - 1 < n and idx % gw > 0: adj[idx].append(idx - 1)
+            if j < gw-1 and idx + 1 < n: adj[idx].append(idx + 1)
     return adj
 
 

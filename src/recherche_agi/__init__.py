@@ -31,6 +31,9 @@ from .message_passing import (build_grid_adjacency, conductivity_physarum,
                               message_passing_step, spatial_consensus,
                               message_passing_train, update_physarum_conductance)
 from .skip_connections import SkipConnections
+from .topdown_projection import (activate_deep_neuron, backprop_topdown,
+                                 spatial_mask_c1, project_to_pixels,
+                                 topdown_projection)
 
 __all__ = [
     # scènes COCO (prototype de scale)
@@ -64,6 +67,12 @@ __all__ = [
     "update_physarum_conductance",
     # skip connections (transversales inter/intra-couches)
     "SkipConnections",
+    # projection top-down guidée (masque sémantique 1×1)
+    "activate_deep_neuron",
+    "backprop_topdown",
+    "spatial_mask_c1",
+    "project_to_pixels",
+    "topdown_projection",
     "draw_architecture",
     "architecture_frame",
     "save_architecture_gif",

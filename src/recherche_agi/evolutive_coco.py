@@ -104,8 +104,8 @@ class HierarchicalCOCO:
         if n == 0:
             return
         zn = patches / (np.linalg.norm(patches, axis=1, keepdims=True) + 1e-8)
-        # grille d'adjacence (4-voisins spatiaux)
-        adj = build_grid_adjacency(gh, gw)
+        # grille d'adjacence (4-voisins spatiaux), bornée au nombre réel de patches
+        adj = build_grid_adjacency(gh, gw, n=n)
         # conductance Physarum initialisée
         self.mp_conductance = np.ones((n, n)) * 0.3
         # activations + surprise de chaque patch sur la couche courante

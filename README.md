@@ -46,7 +46,8 @@ recherche-agi/
 │   ├── mnist_coco_monitor.ipynb       # monitoring (perf + reconstruction + archi)
 │   ├── mnist_coco_report.ipynb        # compte rendu (images, classes, temps CPU)
 │   ├── mnist_coco_texture.ipynb       # texture + couleur (features stuff)
-│   └── mnist_coco_message_passing.ipynb # message passing (structuration + inférence)
+│   ├── mnist_coco_message_passing.ipynb # message passing (structuration + inférence)
+│   └── mnist_coco_topdown.ipynb       # projection top-down guidée (masque 1×1)
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST (référence)
 │   ├── unsupervised.py                # AnchorNeurons, WTA, fatigue, Physarum
@@ -54,6 +55,7 @@ recherche-agi/
 │   ├── texture_features.py            # features couleur + texture
 │   ├── message_passing.py             # message passing sur graphe (structuration + inférence)
 │   ├── skip_connections.py            # skip connections transversales auto-régulées
+│   ├── topdown_projection.py          # projection top-down guidée (masque 1×1)
 │   ├── online_training.py             # callback d'équilibre (ΔW/ΔS/ΔD)
 │   ├── monitor.py                     # visuels architecture évolutive
 │   ├── report.py                      # compte rendu (TrainingTracker)
@@ -122,6 +124,37 @@ couche sur **3 images différentes** (8 couches, ~500 skip connections) :
 => **Abstraction + lissage** : les couches profondes produisent des catégories
 sémantiques (mur, sol) au lieu des couleurs réelles, et le message passing
 harmonise spatialement chaque couche.
+
+---
+
+# ⬇️ Projection Top-Down guidée (masque sémantique 1×1)
+
+Le module `topdown_projection.py` **marie l'abstraction sémantique des couches
+profondes (C8) avec la résolution spatiale de C1**.
+
+## Pipeline
+1. **Sélection** : un neurone d'ancrage actif en couche profonde (ex. le neurone
+   C8 responsable d'un objet)
+2. **Back-propagation top-down** : on propage le signal unitaire vers le bas via
+   les skip-connections et les tubes Physarum validés
+3. **Filtre spatial** : C1 agit comme un filtre haute résolution (chaque patch
+   est marqué s'il reçoit le rétro-signal)
+4. **Masque final** : masque binaire net (0/1) où l'objet est unifié à l'échelle
+   du pixel (1×1)
+
+## Résultat (notebook `mnist_coco_topdown.ipynb`, 2 exemples)
+| Exemple | Neurone C8 | Masque 1×1 |
+|---|---|---|
+| 1 (salon) | #7 | 10009/16960 patches (~59%) — isole télévision, fenêtres, meubles |
+| 2 | #2 | 8989/23360 (~38%) |
+
+=> Le masque top-down est **net et binaire**, isolant des structures de l'image
+(meubles, fenêtres, étagères) via la back-propagation depuis le neurone C8.
+
+## Correction clé
+Bug d'adjacence : quand le nb de patches ne forme pas une grille carrée parfaite
+(`gh*gw > n`), l'adjacence référençait des indices hors bornes. Corrigé :
+`build_grid_adjacency(gh, gw, n)` borne les indices au nombre réel de patches.
 
 ---
 
