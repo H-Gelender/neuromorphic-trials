@@ -75,7 +75,8 @@ recherche-agi/
 │   ├── mnist_multidigit_detection.ipynb # détection multi-chiffres (stride + bounding box)
 │   ├── mnist_reconstruction_detection.ipynb # reconstruction image + 2 scores (IoU & count)
 │   ├── mnist_metaneurons.ipynb         # méta-neurones (centroïdes de prototypes)
-│   └── mnist_respiratory_cycle.ipynb   # cycle respiratoire (gel dynamique + création de couches)
+│   ├── mnist_respiratory_cycle.ipynb   # cycle respiratoire (gel dynamique + création de couches)
+│   └── mnist_respiratory_test.ipynb    # test du cycle sur MNIST (IoU + bounding boxes)
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
 │   ├── unsupervised.py                # AnchorNeurons, WTA, fatigue, co-activation,
@@ -427,3 +428,28 @@ L'analyse **fréquentielle (FFT)** de $S(t)$ distingue :
 
 => Le réseau **"respire"** : il alterne plasticité (explorer) et stabilité
 (consolider), au lieu d'une structure rigide.
+
+---
+
+# 🧪 Test du cycle respiratoire sur MNIST (IoU + bounding boxes)
+
+Le notebook `notebooks/mnist_respiratory_test.ipynb` connecte le **cycle
+respiratoire** à l'entraînement réel des AnchorNeurons et évalue la
+reconstruction + bounding boxes + 2 scores.
+
+## Résultats (scène multi-chiffres [3,7,2] + patches noirs)
+| Configuration | IoU | Count | Boxes |
+|---|---|---|---|
+| Base (sans cycle) | 0.565 | 1.000 | 3/3 |
+| **Cycle respiratoire** | **0.660** | 1.000 | 3/3 |
+| **Gain** | **+0.095** | — | — |
+
+## Analyse
+1. **Les bounding boxes restent bonnes** avec le cycle (3/3, count parfait).
+2. **L'IoU AUGMENTE** avec le cycle respiratoire (+0.095) : la consolidation
+   (gel de C1) stabilise les prototypes et améliore la reconstruction.
+3. Le cycle apporte un **double bénéfice** : meilleure segmentation (IoU) ET
+   stabilité structurelle (gel, pas d'oubli catastrophique, couches dynamiques).
+
+=> Le cycle respiratoire améliore l'IoU tout en gardant la détection correcte :
+un gain de stabilité ET de qualité de segmentation.
