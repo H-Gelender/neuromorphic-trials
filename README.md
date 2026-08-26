@@ -45,13 +45,15 @@ recherche-agi/
 │   ├── mnist_coco_evolutive.ipynb     # hiérarchie profonde (création de couches)
 │   ├── mnist_coco_monitor.ipynb       # monitoring (perf + reconstruction + archi)
 │   ├── mnist_coco_report.ipynb        # compte rendu (images, classes, temps CPU)
-│   └── mnist_coco_texture.ipynb       # texture + couleur (features stuff)
+│   ├── mnist_coco_texture.ipynb       # texture + couleur (features stuff)
+│   └── mnist_coco_message_passing.ipynb # message passing (structuration + inférence)
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST (référence)
 │   ├── unsupervised.py                # AnchorNeurons, WTA, fatigue, Physarum
 │   ├── evolutive_coco.py              # HierarchicalCOCO (création de couches)
 │   ├── texture_features.py            # features couleur + texture
-│   ├── message_passing.py             # message passing sur graphe
+│   ├── message_passing.py             # message passing sur graphe (structuration + inférence)
+│   ├── skip_connections.py            # skip connections transversales auto-régulées
 │   ├── online_training.py             # callback d'équilibre (ΔW/ΔS/ΔD)
 │   ├── monitor.py                     # visuels architecture évolutive
 │   ├── report.py                      # compte rendu (TrainingTracker)
@@ -75,6 +77,53 @@ Le modèle **crée ses couches lui-même** via un **spawn par plateau de surpris
   quantification (consensus local).
 - **Inhibition** : les nœuds surprenants (contours) créent des frontières nettes.
 - Reconstruction 4×4 : le message passing **lisse visiblement** l'image.
+
+---
+
+# 🔀 Skip Connections auto-régulées + Message Passing (structuration + inférence)
+
+## Skip connections (module `skip_connections.py`)
+Le réseau tisse des **connexions transversales** auto-régulées (graphe petit-monde) :
+1. **Pousse synaptique** : connexion candidate C1 → C_{k+m} (conductance faible)
+2. **Validation par la surprise** : si la connexion réduit la surprise, le tube
+   se renforce (flux de résonance)
+3. **Élagage Physarum** : les connexions sans flux sont asséchées et supprimées
+
+Résultat : ~500 connexions inter-couches, préservant les détails fins (bords)
+pour les couches profondes (concept).
+
+## Message passing PENDANT l'entraînement (structuration, `step_image`)
+Pendant l'apprentissage, les nœuds s'échangent des messages pour former des
+représentations stables :
+- **Consensus local** : un nœud apprend en tenant compte de la résonance de ses
+  voisins (pas isolément)
+- **Inhibition** : les nœuds à forte erreur empêchent l'apprentissage uniforme
+  (maintien de la compétition WTA)
+- **Tubes Physarum** : la conductance W_adj est mise à jour par la co-activation
+
+Résultat : la surprise descend (1.6 → 0.2), le modèle apprend des structures
+spatiales stables, pas du bruit isolé.
+
+## Message passing d'INFÉRENCE (reconstruction)
+À la reconstruction, les poids sont gelés, le MP nettoie l'image :
+- **Harmonisation spatiale** : les nœuds voisins diffusent leur activation →
+  une région homogène opte pour la même décision (sous-pixels bruités éliminés)
+- **Propagation top-down** : le méta-neurone de C8 diffuse son signal via les
+  skip connections vers C1 → masque continu et unifié
+
+## Validation sur PLUSIEURS images (3 exemples)
+Le notebook `mnist_coco_message_passing.ipynb` montre la reconstruction par
+couche sur **3 images différentes** (8 couches, ~500 skip connections) :
+| Couches | Effet |
+|---|---|
+| C1-C3 | bruitées (détails bas niveau) |
+| C5-C8 | zones grandes et homogènes (lissage) — murs/sol uniformes |
+
+=> **Abstraction + lissage** : les couches profondes produisent des catégories
+sémantiques (mur, sol) au lieu des couleurs réelles, et le message passing
+harmonise spatialement chaque couche.
+
+---
 
 ### Compte rendu d'entraînement (CPU)
 | Métrique | Valeur (171 classes) |

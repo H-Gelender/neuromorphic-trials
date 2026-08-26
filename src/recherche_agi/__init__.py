@@ -28,7 +28,9 @@ from .monitor import (architecture_frame, draw_architecture,
                       save_architecture_gif)
 from .report import TrainingTracker, generate_report
 from .message_passing import (build_grid_adjacency, conductivity_physarum,
-                              message_passing_step, spatial_consensus)
+                              message_passing_step, spatial_consensus,
+                              message_passing_train, update_physarum_conductance)
+from .skip_connections import SkipConnections
 
 __all__ = [
     # scènes COCO (prototype de scale)
@@ -58,6 +60,10 @@ __all__ = [
     "conductivity_physarum",
     "message_passing_step",
     "spatial_consensus",
+    "message_passing_train",
+    "update_physarum_conductance",
+    # skip connections (transversales inter/intra-couches)
+    "SkipConnections",
     "draw_architecture",
     "architecture_frame",
     "save_architecture_gif",

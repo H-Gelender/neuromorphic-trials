@@ -84,3 +84,53 @@ def spatial_consensus(z, adjacency, F, alpha=0.5, n_iter=1, surprise=None):
     for _ in range(n_iter):
         z = message_passing_step(z, None, None, adjacency, F, alpha, surprise)
     return z
+
+
+def message_passing_train(activations, surprise, adjacency, conductance,
+                          alpha=0.5, surprise_gain=2.0):
+    """Message passing PENDANT L'ENTRAÎNEMENT (structuration).
+
+    Chaque nœud ajuste son activation en tenant compte de la résonance de ses
+    voisins (consensus local) et de l'inhibition des nœuds surprenants
+    (maintien de la compétition WTA).
+
+    activations : (n, n_neurons) activations de chaque nœud
+    surprise    : (n,) surprise de reconstruction de chaque nœud
+    adjacency   : liste d'adjacence
+    conductance : (n, n) conductivité Physarum entre nœuds
+
+    Retourne les activations lissées par consensus + inhibition.
+    """
+    n = activations.shape[0]
+    n_neurons = activations.shape[1]
+    out = activations.copy()
+    for i in range(n):
+        reson = np.zeros(n_neurons)
+        inh = 0.0
+        for j in adjacency[i]:
+            g = conductance[i, j]
+            reson += g * activations[j]          # résonance des voisins
+            inh += surprise[j] * g               # inhibition des voisins surprenants
+        own_s = surprise[i]
+        # l'inhibition réduit le poids du consensus (garde la frontière)
+        smoothness = 1.0 / (1.0 + surprise_gain * own_s)
+        out[i] = activations[i] + alpha * smoothness * reson
+    return out
+
+
+def update_physarum_conductance(conductance, activations, adjacency, lr=0.05,
+                                decay=0.98, min_g=0.0, max_g=1.0):
+    """Met à jour la conductivité Physarum selon le flux de co-activation.
+
+    Les connexions où le flux de messages est utile (co-activation élevée)
+    se renforcent, les autres sont élaguées (décroissance).
+    """
+    for i, neigh in enumerate(adjacency):
+        for j in neigh:
+            # co-activation des nœuds voisins (résonance)
+            co_act = activations[i] @ activations[j]
+            # renforcement si co-activation, décroissance sinon (Physarum)
+            conductance[i, j] *= decay
+            conductance[i, j] += lr * co_act
+            conductance[i, j] = min(max_g, max(min_g, conductance[i, j]))
+    return conductance
