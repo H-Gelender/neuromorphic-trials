@@ -73,7 +73,8 @@ recherche-agi/
 │   ├── mnist_feedback_topdown.ipynb    # rétroaction top-down (couche 2 → couche 1)
 │   ├── mnist_threshold_wta_patches.ipynb # WTA par seuil + découpage image
 │   ├── mnist_multidigit_detection.ipynb # détection multi-chiffres (stride + bounding box)
-│   └── mnist_reconstruction_detection.ipynb # reconstruction image + 2 scores (IoU & count)
+│   ├── mnist_reconstruction_detection.ipynb # reconstruction image + 2 scores (IoU & count)
+│   └── mnist_metaneurons.ipynb         # méta-neurones (centroïdes de prototypes)
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
 │   ├── unsupervised.py                # AnchorNeurons, WTA, fatigue, co-activation,
@@ -355,3 +356,36 @@ boxes (comptage). Scènes avec **1 chiffre + patches noirs**.
 
 => Le **comptage est parfait**, la **segmentation (IoU)** est correcte (>0.5 sur
 la plupart des chiffres) mais imparfaite à cause de la reconstruction bruitée.
+
+---
+
+# 🧠 Méta-Neurones (centroïdes de prototypes)
+
+Le notebook `notebooks/mnist_metaneurons.ipynb` ajoute des **méta-neurones** :
+agrégation par similitude matricielle des prototypes de Couche 1.
+
+$$S_{ij} = \\frac{W_i \\cdot W_j}{\\|W_i\\|\\,\\|W_j\\|}, \\qquad W_{\\text{meta}_k} = \\frac{1}{|C_k|} \\sum_{i \\in C_k} W_i$$
+
+## Balayage du seuil (réduction vs acc)
+| Seuil | Neurones | Réduction | Acc |
+|---|---|---|---|
+| 0.95 | 120→120 | 0% | 0.693 |
+| 0.85 | 120→118 | 2% | 0.690 |
+| **0.7** | 120→98 | **18%** | 0.677 |
+| 0.6 | 120→89 | 26% | 0.667 |
+| 0.5 | 120→77 | 36% | 0.590 |
+
+## Reconstruction multi-chiffres (3 chiffres + patches noirs)
+- **Score IoU** : **0.667** (segmentation)
+- **Score count** : **1.000** (3/3 boxes détectées)
+- **Réduction réseau** : 120 → 98 méta (18%)
+
+## Analyse
+1. **Réduction** : le seuil 0.7 fusionne les prototypes similaires (18% de réduction).
+2. **Classification** : l'acc est maintenu (léger recul à seuil agressif).
+3. **Localisation multi-chiffres** : boxes bien alignées, **count parfait** (1.000),
+   IoU 0.67 — mais la reconstruction **visuelle** du contenu est bruitée (moyennage).
+
+=> Les méta-neurones apportent la **réduction du réseau** et une **meilleure
+robustesse de localisation**, au prix d'une reconstruction visuelle moins
+spécifique.
