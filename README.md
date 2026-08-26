@@ -76,7 +76,8 @@ recherche-agi/
 │   ├── mnist_reconstruction_detection.ipynb # reconstruction image + 2 scores (IoU & count)
 │   ├── mnist_metaneurons.ipynb         # méta-neurones (centroïdes de prototypes)
 │   ├── mnist_respiratory_cycle.ipynb   # cycle respiratoire (gel dynamique + création de couches)
-│   └── mnist_respiratory_test.ipynb    # test du cycle sur MNIST (IoU + bounding boxes)
+│   ├── mnist_respiratory_test.ipynb    # test du cycle sur MNIST (IoU + bounding boxes)
+│   └── mnist_mode_collapse.ipynb       # mode collapse + domination densité
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
 │   ├── unsupervised.py                # AnchorNeurons, WTA, fatigue, co-activation,
@@ -453,3 +454,43 @@ reconstruction + bounding boxes + 2 scores.
 
 => Le cycle respiratoire améliore l'IoU tout en gardant la détection correcte :
 un gain de stabilité ET de qualité de segmentation.
+
+---
+
+# 🎭 Mode collapse + domination par la densité
+
+Le notebook `notebooks/mnist_mode_collapse.ipynb` diagnostique le problème :
+le réseau remplace les vrais chiffres (3, 7, 2) par des reconstructions denses
+(0, 8) et sature le fond de bruit.
+
+## Cause (densité par chiffre)
+| Chiffre | Densité (pixels actifs) |
+|---|---|
+| 0 | 0.203 (dense) |
+| 1 | 0.062 (fin) |
+| 3 | 0.208 (dense) |
+| 7 | 0.106 (fin) |
+
+En `W·x`, les chiffres **denses** (0,3,5,8) produisent plus d'activation et
+**gagnent toujours** → les **fins** (1,7,4) sont écrasés (**mode collapse**).
+
+## Corrections testées
+| Seuil | IoU | Count | Bruit |
+|---|---|---|---|
+| 0.0 | 0.560 | 1.000 | 0.796 |
+| 0.2 | 0.544 | 0.667 | 0.704 |
+| 0.3 | 0.250 | 0.333 | 0.509 |
+| 0.4 | 0.252 | 0.333 | 0.272 |
+| **0.5** | **0.728** | **1.000** | **0.148** |
+
+## Analyse honnête
+1. **Mode collapse confirmé** : les denses dominent la compétition.
+2. **Seuillage global** : un seuil médian (0.2-0.4) **dégrade** (écrase les formes
+   fines 7,2). Le **seuil 0.5** est optimal : nettoie le bruit (0.80→0.15) ET
+   améliore l'IoU (0.56→0.73) avec count parfait.
+3. **Homéostasie divisive** : testée, dégrade (sur-compensation). L'homéostasie
+   soustractive actuelle est meilleure.
+
+=> Le mode collapse est réel (domination de densité) mais un **seuil RELATIF** à
+chaque prototype est la bonne direction (le seuil 0.5 le démontre), pas un seuil
+global agressif ni la fatigue divisive.
