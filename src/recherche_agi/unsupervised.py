@@ -169,15 +169,21 @@ class AnchorNeurons:
     def predict_label(self, z: np.ndarray) -> tuple[int | None, float]:
         """Classification a posteriori : le neurone gagnant et sa classe dominante.
 
-        Le neurone le plus actif a été observé majoritairement sur une classe.
+        Utilise la SIMILARITÉ SANS fatigue (la fatigue sert à l'apprentissage,
+        pas à la décision). Le meilleur neurone labelisé est choisi.
         """
-        a = self.activate(z)
-        winner = int(np.argmax(a))
-        if winner not in self.labels_seen:
-            return None, float(a[winner])
-        # classe dominante observée sur ce neurone
-        cls = max(self.labels_seen[winner].items(), key=lambda x: x[1])[0]
-        return cls, float(a[winner])
+        z = np.asarray(z, dtype=float)
+        zn = z / (np.linalg.norm(z) + 1e-8)
+        sim = self.W @ zn                     # similarité cosinus (sans fatigue)
+        labeled = [i for i in range(len(sim)) if i in self.labels_seen]
+        if not labeled:
+            return None, float(sim.max())
+        order = np.argsort(-sim)
+        for w in order:
+            if w in self.labels_seen:
+                cls = max(self.labels_seen[w].items(), key=lambda x: x[1])[0]
+                return cls, float(sim[w])
+        return None, float(sim[order[0]])
 
     def cluster_labels(self) -> dict:
         """Carte neurone -> classe dominante (a posteriori, observation)."""

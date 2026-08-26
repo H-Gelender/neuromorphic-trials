@@ -71,7 +71,8 @@ recherche-agi/
 │   ├── mnist_neurogenesis.ipynb        # neurogenèse dynamique + couche Hebbienne
 │   ├── mnist_two_layers_viz.ipynb      # deux couches + visualisation en images
 │   ├── mnist_feedback_topdown.ipynb    # rétroaction top-down (couche 2 → couche 1)
-│   └── mnist_threshold_wta_patches.ipynb # WTA par seuil + découpage image
+│   ├── mnist_threshold_wta_patches.ipynb # WTA par seuil + découpage image
+│   └── mnist_multidigit_detection.ipynb # détection multi-chiffres (stride + bounding box)
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
 │   ├── unsupervised.py                # AnchorNeurons, WTA, fatigue, co-activation,
@@ -280,3 +281,33 @@ seuil enrichit la couche 2 (sparsité contrôlée).
 => Le gain du découpage est modeste et dépend du seed ; le seuil n'impacte pas la
 classification directe (il sert à la **sparsité de la représentation** pour la
 couche 2).
+
+---
+
+# 🔍 Détection multi-chiffres (fenêtre glissante + stride + bounding box)
+
+Le notebook `notebooks/mnist_multidigit_detection.ipynb` passe à des **images
+contenant plusieurs chiffres** : une fenêtre 28×28 **défile** l'image (stride),
+chaque fenêtre est classifiée, puis on **regroupe en bounding boxes** avec une
+classification par chiffre.
+
+## Pipeline
+```
+[ Image multi-chiffres ] → fenêtre glissante (stride) → classification → bounding boxes
+```
+
+## Résultats
+- Image `[3, 7, 2]` → fenêtre glissante (stride 7) → bounding boxes : `[3, 0, 1, 3]`
+- **3 chiffres spatialement encadrés** (bounding boxes), mais **étiquetage imparfait**
+
+## Analyse honnête
+1. Le **pipeline fonctionne structurellement** : la fenêtre glissante défile et
+   les détections voisines se regroupent en bounding boxes.
+2. La **qualité d'étiquetage** reflète la discrimination du classifieur : les
+   chiffres confondables (2/3/6/8) sont mal classés, et le fond peut être classé
+   "0" (neurones de 0 sur-représentés).
+3. **Améliorations possibles** : classifieur plus discriminant (plus de neurones,
+   ou le feedback top-down γ=0.12 qui donnait 1.000) + seuil d'énergie du fond.
+
+Le pipeline de **détection multi-chiffres** est opérationnel ; sa précision dépend
+de la discrimination du classifieur en amont.
