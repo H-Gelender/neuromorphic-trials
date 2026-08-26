@@ -70,7 +70,8 @@ recherche-agi/
 │   ├── mnist_global_accuracy.ipynb     # acc globale après drift (test 0-9)
 │   ├── mnist_neurogenesis.ipynb        # neurogenèse dynamique + couche Hebbienne
 │   ├── mnist_two_layers_viz.ipynb      # deux couches + visualisation en images
-│   └── mnist_feedback_topdown.ipynb    # rétroaction top-down (couche 2 → couche 1)
+│   ├── mnist_feedback_topdown.ipynb    # rétroaction top-down (couche 2 → couche 1)
+│   └── mnist_threshold_wta_patches.ipynb # WTA par seuil + découpage image
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
 │   ├── unsupervised.py                # AnchorNeurons, WTA, fatigue, co-activation,
@@ -244,3 +245,38 @@ Pour chaque image, la boucle se fait en **2 temps** :
 
 Le γ optimal est dans la **zone de guidage (0.1-0.4)** : doser le contexte sans
 laisser la C2 dominer la mesure visuelle.
+
+---
+
+# 🔲 WTA par seuil + découpage image
+
+Le notebook `notebooks/mnist_threshold_wta_patches.ipynb` modifie deux mécanismes.
+
+## 1. WTA par seuil (au lieu de top-K)
+$$\text{WTA}_\theta(a) = \begin{cases} a_i & \text{si } a_i \ge \theta \\ 0 & \text{sinon} \end{cases}$$
+
+## 2. Découpage de l'image (patches)
+On encode l'image par **patches** (blocs) au lieu des pixels bruts.
+
+## Résultats commentés
+**Découpage image** :
+| Patch | Acc |
+|---|---|
+| sans découpage | 0.971 |
+| 4×4 | 0.970 |
+| **7×7** | **0.976** |
+| 14×14 | 0.935 |
+
+Le découpage en patches (4-7) est comparable ou légèrement supérieur aux pixels
+bruts (varie selon les seeds). Le patch 7×7 est un bon compromis contexte local
+vs résolution.
+
+**WTA par seuil** : le seuil **ne change pas la classification directe**
+(argmax ≈ seuil) car on prend toujours le max au-dessus du seuil. L'intérêt du
+WTA par seuil est la **représentation** : garder plusieurs neurones au-dessus du
+seuil enrichit la couche 2 (sparsité contrôlée).
+
+## Analyse
+=> Le gain du découpage est modeste et dépend du seed ; le seuil n'impacte pas la
+classification directe (il sert à la **sparsité de la représentation** pour la
+couche 2).
