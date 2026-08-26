@@ -69,7 +69,8 @@ recherche-agi/
 │   ├── mnist_physarum_pruning.ipynb    # élagage Physarum résout le goulot
 │   ├── mnist_global_accuracy.ipynb     # acc globale après drift (test 0-9)
 │   ├── mnist_neurogenesis.ipynb        # neurogenèse dynamique + couche Hebbienne
-│   └── mnist_two_layers_viz.ipynb      # deux couches + visualisation en images
+│   ├── mnist_two_layers_viz.ipynb      # deux couches + visualisation en images
+│   └── mnist_feedback_topdown.ipynb    # rétroaction top-down (couche 2 → couche 1)
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
 │   ├── unsupervised.py                # AnchorNeurons, WTA, fatigue, co-activation,
@@ -192,3 +193,32 @@ déplace les neurones de la couche 1 → l'entrée de la couche 2 bouge.
    patterns d'activation appris.
 
 Le meilleur reste la couche 1 (`predict_label`) sur le système combiné.
+
+---
+
+# 🔄 Rétroaction Top-Down (couche 2 → couche 1)
+
+Le notebook `notebooks/mnist_feedback_topdown.ipynb` connecte la couche 2 **en
+retour** vers la couche 1 :
+
+$$\text{Entrée}_{C1} = \text{Signal Visuel} + \gamma \cdot \text{Feedback}_{C2}$$
+
+Le feedback (représentation de haut niveau) est rétroprojeté via `W2^T` dans
+l'espace de la couche 1, **affinant la perception** de bas niveau (predictive
+coding top-down).
+
+## Résultats
+| Configuration | Acc |
+|---|---|
+| Couche 1 seule (sans feedback) | 0.939 |
+| **γ = 0.12-0.15 (feedback)** | **1.000** |
+| γ = 0.02 | 0.974 |
+| γ > 0.2 | 0.000 (déformation) |
+
+## Analyse
+La rétroaction à **intensité modérée** (γ≈0.12) **corrige les ambiguïtés** de la
+couche 1 (0.939 → 1.000) : le contexte de haut niveau guide la perception de bas
+niveau. Mais γ trop fort **déforme** le signal → acc effondrée.
+
+C'est le principe du **predictive coding** : le top-down guide le bottom-up,
+avec modération (γ optimal ~0.12).
