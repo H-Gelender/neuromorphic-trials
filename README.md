@@ -83,7 +83,8 @@ recherche-agi/
 │   ├── mnist_coco_texture.ipynb        # COCO : texture + couleur (au lieu pixels gris)
 │   ├── mnist_coco_recon.ipynb          # reconstruction image réelle vs modèle
 │   ├── mnist_coco_evolutive.ipynb      # entraînement évolutif (neurogenèse + couches)
-│   └── mnist_coco_monitor.ipynb        # monitoring (perf + reconstruction + architecture)
+│   ├── mnist_coco_monitor.ipynb        # monitoring (perf + reconstruction + architecture)
+│   └── mnist_coco_report.ipynb         # compte rendu (images, classes, temps CPU)
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
 │   ├── unsupervised.py                # AnchorNeurons, WTA, fatigue, co-activation,
@@ -94,6 +95,8 @@ recherche-agi/
 │   ├── texture_features.py            # caractéristiques couleur + texture
 │   ├── online_training.py             # callback d'équilibre (ΔW/ΔS/ΔD) + arrêt 1h
 │   ├── evolutive_coco.py              # entraînement évolutif (neurogenèse + couches)
+│   ├── monitor.py                     # visuels architecture évolutive (GIF)
+│   ├── report.py                      # compte rendu (images, classes, temps CPU)
 │   ├── visualize.py                   # visuels architecture + évolution
 │   ├── visualize_coco_images.py       # visuels images COCO claires
 │   └── training.py                    # entraînement auxiliaire (référence)
@@ -676,3 +679,37 @@ Le problème initial : la neurogenèse ajoutait un neurone à CHAQUE patch
 (explosion à 2000) et aucune couche n'était créée. Corrigé avec :
 - **neurogenèse sélective** (seuil de nouveauté élevé : n'ajoute que si mal représenté)
 - **spawn par saturation** (plafond + fraction de saturation) au lieu de l'oscillation
+
+---
+
+# 📋 Compte rendu d'entraînement COCO
+
+Le notebook `notebooks/mnist_coco_report.ipynb` génère un **compte rendu complet**
+d'entraînement (module `report.py` + `TrainingTracker`) :
+
+## Métriques suivies
+| Métrique | Valeur (exemple) |
+|---|---|
+| **Images passées** | 40 |
+| **Patches traités** | 32 800 |
+| **Classes vues** | 40 |
+| **Classes/image (moy)** | 1.0 |
+| **Patches/image (moy)** | 820 |
+| **Temps/image (moy)** | ~0 s (features locales) |
+| **Temps total CPU** | 0.5 s |
+| **Débit** | 60 904 patches/s |
+| **Neurones finaux** | 31 |
+| **Couches** | 2 (+1 archivée) |
+| **Poids totaux** | 1 085 |
+| **Connexions (co_act>0)** | 130 |
+
+## Rapport visuel
+Le rapport affiche 4 panneaux :
+1. **Temps par image** (courbe)
+2. **Top classes** (répartition des features)
+3. **Neurogenèse** (évolution des neurones)
+4. **Résumé texte** (toutes les métriques en un coup d'œil)
+
+Le débit est élevé (~60K patches/s) car on utilise les **features en local**
+(plus de réseau) — le calcul NumPy sur CPU mono-thread reste le facteur limitant
+(22 cœurs inutilisés).
