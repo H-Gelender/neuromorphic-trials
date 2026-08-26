@@ -136,3 +136,33 @@ Une 2e couche (SOM Hebbien) reçoit les activations de la couche 1 et classifie.
 => La neurogenèse est une bonne **croissance adaptative**, mais connecter une
 couche Hebbienne par-dessus ne s'améliore pas dans cette architecture — le frein
 est la dimension dynamique.
+
+## Système COMBINÉ : neurogenèse + élagage Physarum
+
+La vraie amélioration est d'**intégrer la neurogenèse AU système** (élagage
+Physarum), pas de la tester seule — le comportement biologique du cerveau :
+**croissance** (nouveau) + **atrophie** (inutile).
+
+| Réglage (max, seuil, prune) | Acc globale |
+|---|---|
+| max=60, seuil=0.6, prune=0.3 | 0.917 |
+| max=60, seuil=0.6, prune=0.4 | 0.932 |
+| **max=60, seuil=0.7, prune=0.4** | **0.974** |
+| max=80, seuil=0.6, prune=0.3 | 0.831 |
+
+## Bilan : amélioration par neurogenèse
+| Approche | Acc |
+|---|---|
+| Élagage seul (référence) | ~0.95-0.96 |
+| Neurogenèse seule | 0.62 (sature) |
+| **Neurogenèse + élagage COMBINÉ** | **0.974** |
+
+**Conclusion** :
+1. La neurogenèse intégrée à l'élagage Physarum **dépasse** l'élagage seul
+   (0.974 vs 0.95-0.96) : croissance + atrophie cohabitent et s'améliorent.
+2. Il faut un **plafond bas (60) + seuil haut (0.7) + élagage fort (0.4)** : la
+   croissance est contenue, l'atrophie gère les ressources.
+3. **Avantage** : on n'a plus besoin de fixer le nombre initial de neurones (la
+   neurogenèse croît de 5 automatiquement) — le système est **autonome**.
+4. C'est le vrai comportement biologique : **neurogenèse + élagage synaptique** =
+   adaptation continue du réservoir.
