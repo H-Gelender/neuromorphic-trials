@@ -222,3 +222,25 @@ niveau. Mais γ trop fort **déforme** le signal → acc effondrée.
 
 C'est le principe du **predictive coding** : le top-down guide le bottom-up,
 avec modération (γ optimal ~0.12).
+
+## Cycle feedforward-feedback (décomposition 2 temps)
+Pour chaque image, la boucle se fait en **2 temps** :
+- **t=0 (feedforward)** : `a1 = W1·x`, `z1 = WTA(a1)`, `z2 = WTA(W2·z1)`
+- **t=1 (résonance)** : `a1 = W1·x + γ·(W2^T·z2)`, `z1 = WTA(a1)`
+
+## Les 3 régimes de γ (facteur d'attention)
+| γ | Régime | Acc |
+|---|---|---|
+| **0** | Feedforward pur (mesure) | 0.968 |
+| **0.1-0.4** | Guidage attentionnel (top-down modéré) | 0.85-0.97 |
+| **≥1.0** | Hallucination (contexte domine) | 0.14-0.52 |
+
+## Visualisation (4 figures)
+1. **Couche 1** : prototypes en images (0-9)
+2. **Couche 2** : poids dans l'espace d'activation (8×8)
+3. **Courbe acc vs γ** : zone de guidage en vert, seuil d'hallucination en rouge
+4. **Hallucination démontrée** : un vrai « 5 » à γ=2 est classé par un neurone de
+   **classe 0** — le top-down allume un neurone absent de l'image.
+
+Le γ optimal est dans la **zone de guidage (0.1-0.4)** : doser le contexte sans
+laisser la C2 dominer la mesure visuelle.
