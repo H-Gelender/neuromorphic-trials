@@ -24,6 +24,8 @@ from .visualize import visualize_architecture, visualize_evolution, visualize_in
 from .visualize_coco_images import (colormap_mask, visualize_coco_sample,
                                     visualize_patches_rgb)
 from .evolutive_coco import EvolutiveCOCO
+from .monitor import (architecture_frame, draw_architecture,
+                      save_architecture_gif)
 
 __all__ = [
     # scènes COCO (prototype de scale)
@@ -45,6 +47,10 @@ __all__ = [
     "visualize_patches_rgb",
     # entraînement évolutif COCO
     "EvolutiveCOCO",
+    # monitoring architecture évolutive
+    "draw_architecture",
+    "architecture_frame",
+    "save_architecture_gif",
     # pipeline COCO classe par classe
     "train_class_by_class",
     "classify_patch",

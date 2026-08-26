@@ -82,7 +82,8 @@ recherche-agi/
 │   ├── mnist_coco_scale.ipynb          # scale vers COCO Stuff (classe par classe)
 │   ├── mnist_coco_texture.ipynb        # COCO : texture + couleur (au lieu pixels gris)
 │   ├── mnist_coco_recon.ipynb          # reconstruction image réelle vs modèle
-│   └── mnist_coco_evolutive.ipynb      # entraînement évolutif (neurogenèse + couches)
+│   ├── mnist_coco_evolutive.ipynb      # entraînement évolutif (neurogenèse + couches)
+│   └── mnist_coco_monitor.ipynb        # monitoring (perf + reconstruction + architecture)
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
 │   ├── unsupervised.py                # AnchorNeurons, WTA, fatigue, co-activation,
@@ -649,3 +650,29 @@ pendant l'entraînement (le comportement attendu) :
 - Le **goulot n'est pas le calcul mais le réseau** : ~21 s/image en streaming HF.
 - Solution : **cacher le set de validation en bloc** (5 000 images, bien moins
   que les 164K du train) pour un accès local instantané.
+
+---
+
+# 📊 Monitoring COCO : performance + reconstruction + architecture évolutive
+
+Le notebook `notebooks/mnist_coco_monitor.ipynb` montre **comment le modèle
+évolue et progresse** pendant l'entraînement (set validation COCO, 171 classes).
+
+## Comportement évolutif corrigé
+Le modèle ÉVOLUE réellement (contrairement aux versions fixes) :
+- **Neurogenèse progressive** : 10 → 31 → 52 → 74 → 93 → 115 → 136 → 156
+  neurones (croissance douce, plus d'explosion instantanée)
+- **Spawn de couche à saturation** : quand C1 atteint ~80% du plafond, C1 est
+  **archivée** et une **C2 est créée** pour absorber la nouveauté (couches 1→2)
+- **Élagage Physarum** compense la croissance
+
+## Monitoring (3 figures)
+1. **Évolution de l'accuracy** : 0.012 → 0.053 au fil des patches
+2. **Ce que les poids construisent** : prototypes des neurones (la représentation apprise)
+3. **Architecture finale** : couches, neurones, connexions bottom-up + rétroaction
+
+## Correction clé
+Le problème initial : la neurogenèse ajoutait un neurone à CHAQUE patch
+(explosion à 2000) et aucune couche n'était créée. Corrigé avec :
+- **neurogenèse sélective** (seuil de nouveauté élevé : n'ajoute que si mal représenté)
+- **spawn par saturation** (plafond + fraction de saturation) au lieu de l'oscillation
