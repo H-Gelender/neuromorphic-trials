@@ -97,6 +97,7 @@ recherche-agi/
 │   ├── evolutive_coco.py              # entraînement évolutif (neurogenèse + couches)
 │   ├── monitor.py                     # visuels architecture évolutive (GIF)
 │   ├── report.py                      # compte rendu (images, classes, temps CPU)
+│   ├── message_passing.py             # message passing sur graphe (consensus + inhibition)
 │   ├── visualize.py                   # visuels architecture + évolution
 │   ├── visualize_coco_images.py       # visuels images COCO claires
 │   └── training.py                    # entraînement auxiliaire (référence)
@@ -748,3 +749,36 @@ moment.
 3. **L'accuracy reste faible (0.006)** : classer 171 classes stuff avec 400
    neurones et des features de texture brutes est très difficile. C'est un
    résultat à améliorer (plus de neurones, meilleures features, hiérarchie).
+
+---
+
+# 🌐 Message Passing sur le graphe des nœuds
+
+Le module `message_passing.py` fait s'échanger des messages aux nœuds du graphe
+(patches) pour **lisser l'activation** et **propager la surprise**.
+
+## Les 2 types de messages
+1. **Résonance (consensus spatial)** : un neurone qui gagne sur le nœud $i$
+   envoie un biais positif aux voisins $j \in \mathcal{N}(i)$
+   $$m_{j \to i} = A_j \cdot W_{\text{adj}}(j, i)$$
+   → lisse le bruit de quantification (consensus local).
+
+2. **Surprise / Inhibition** : un nœud à forte erreur de reconstruction diffuse
+   une inhibition à ses voisins → les **contours** créent une frontière nette
+   (pas de lissage sur les bords).
+
+## Formule
+$$z_i^{(t+1)} = \text{WTA}\left( x_i \cdot W + \alpha \sum_{j \in \mathcal{N}(i)} \mathcal{F}_{j \to i} \cdot z_j^{(t)} \right)$$
+où $\mathcal{F}$ = **conductivité Physarum** (les connexions utiles se
+renforcent, les autres s'élaguent).
+
+## Résultat visuel (reconstruction 4×4)
+| Panneau | Effet |
+|---|---|
+| 4×4 brut | très bruité, couleurs erratiques |
+| **4×4 + message passing** | **beaucoup plus lisse** — consensus spatial, bruit de quantification réduit |
+| 1×1 | contours préservés, résolution maximale |
+
+Le message passing **lisse le bruit sans imposer de formule classique** : le
+graphe trouve un consensus local, et les frontières (contours) sont préservées
+par l'inhibition de surprise.

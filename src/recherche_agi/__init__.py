@@ -27,6 +27,8 @@ from .evolutive_coco import EvolutiveCOCO
 from .monitor import (architecture_frame, draw_architecture,
                       save_architecture_gif)
 from .report import TrainingTracker, generate_report
+from .message_passing import (build_grid_adjacency, conductivity_physarum,
+                              message_passing_step, spatial_consensus)
 
 __all__ = [
     # scènes COCO (prototype de scale)
@@ -51,6 +53,11 @@ __all__ = [
     # monitoring + rapport
     "TrainingTracker",
     "generate_report",
+    # message passing (graphe de nœuds)
+    "build_grid_adjacency",
+    "conductivity_physarum",
+    "message_passing_step",
+    "spatial_consensus",
     "draw_architecture",
     "architecture_frame",
     "save_architecture_gif",

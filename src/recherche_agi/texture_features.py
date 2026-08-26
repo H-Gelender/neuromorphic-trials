@@ -23,12 +23,15 @@ def color_texture_features(patch_rgb, bins=8):
     # --- texture ---
     gray = p.mean(axis=-1)
     feats.append(gray.std()/255.0)                    # contraste global
-    gy, gx = np.gradient(gray)
-    feats.append(np.sqrt(gx**2 + gy**2).mean()/255.0) # énergie du gradient
-    feats.append(np.abs(gx).mean()/255.0)             # gradient horizontal
-    feats.append(np.abs(gy).mean()/255.0)             # gradient vertical
-    # co-occurrence simple : moyenne du produit voisin (texture)
-    feats.append((gray[:,1:]*gray[:,:-1]).mean()/255.0**2)
+    # si le patch est trop petit pour le gradient (1x1), on met 0
+    if gray.shape[0] >= 2 and gray.shape[1] >= 2:
+        gy, gx = np.gradient(gray)
+        feats.append(np.sqrt(gx**2 + gy**2).mean()/255.0) # énergie du gradient
+        feats.append(np.abs(gx).mean()/255.0)             # gradient horizontal
+        feats.append(np.abs(gy).mean()/255.0)             # gradient vertical
+        feats.append((gray[:,1:]*gray[:,:-1]).mean()/255.0**2)  # co-occurrence
+    else:
+        feats.extend([0.0, 0.0, 0.0, 0.0])
     return np.array(feats, float)
 
 
