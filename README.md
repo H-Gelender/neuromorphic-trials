@@ -160,7 +160,8 @@ recherche-agi/
 │   ├── mnist_physarum_pruning.ipynb    # élagage Physarum des AnchorNeurons sous drift
 │   ├── mnist_global_accuracy.ipynb     # acc globale après drift (test aléatoire 0-9)
 │   ├── mnist_visualize_evolution.ipynb # visualisation GIF de l'évolution du modèle
-│   └── mnist_graph_evolution.ipynb     # graphe neuromorphique (co-activation + élagage)
+│   ├── mnist_graph_evolution.ipynb     # graphe neuromorphique (co-activation + élagage)
+│   └── mnist_recreate_images.ipynb     # recréer les images depuis les poids
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
 │   ├── deep_hebbian.py                # encodeur hiérarchique (L1→L2, anti-Hebbian, soft-WTA)
@@ -1202,6 +1203,41 @@ atrophie des inutiles. C'est l'**évolution de l'architecture neuromorphique**.
 
 GIF : `notebooks/figs/graph_evolution.gif` (11 frames). La co-activation est
 implémentée dans `AnchorNeurons.co_act` et atrophiée par `physarum_prune`.
+
+---
+
+# 🖼️ Recréer les images depuis les poids
+
+Le notebook `notebooks/mnist_recreate_images.ipynb` **recrée les images** à partir
+des **poids** des neurones d'ancrage après le drift rééquilibré (acc 0.982).
+
+## Résultat (vérifié visuellement)
+Chaque prototype est **reconnaissable** :
+| Classe | Prototype recréé |
+|---|---|
+| 0 | boucle |
+| 1 | trait vertical |
+| 2 | courbe + diagonale |
+| 3 | deux courbes |
+| 4 | barre + diagonale |
+| 5 | barre horizontale + descente |
+| 6 | boucle + courbe |
+| 7 | barre + diagonale |
+| 8 | deux boucles |
+| 9 | boucle + queue |
+
+Les images sont **floues/bruitées** (poids bruts) mais les **formes
+structurelles sont intactes** — le modèle a assimilé le **concept** de chaque
+chiffre malgré l'apprentissage séquentiel + l'élagage Physarum.
+
+## Les 3 figures
+1. Prototype principal de chaque classe (2×5)
+2. Plusieurs prototypes par classe (10×5)
+3. Comparaison réel vs recréé (2×10)
+
+L'apprentissage séquentiel (0/1 puis 2-9) + élagage Physarum **n'ont pas corrompu**
+les représentations : chaque classe a conservé un prototype correct, cohérent
+avec l'acc globale de 0.98.
 
 ## Résultats mesurés
 - **Couche lue sur z synaptique** : train 0.453 / test 0.393 (signature 64 dims
