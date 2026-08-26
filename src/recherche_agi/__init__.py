@@ -33,7 +33,7 @@ from .message_passing import (build_grid_adjacency, conductivity_physarum,
 from .skip_connections import SkipConnections
 from .topdown_projection import (activate_deep_neuron, backprop_topdown,
                                  spatial_mask_c1, project_to_pixels,
-                                 topdown_projection)
+                                 topdown_projection, multi_instance_topdown)
 
 __all__ = [
     # scènes COCO (prototype de scale)
@@ -73,6 +73,7 @@ __all__ = [
     "spatial_mask_c1",
     "project_to_pixels",
     "topdown_projection",
+    "multi_instance_topdown",
     "draw_architecture",
     "architecture_frame",
     "save_architecture_gif",

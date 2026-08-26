@@ -48,21 +48,32 @@ def backprop_topdown(signal, layers, skip_connections, current_depth, W_adj=None
     # propager de la couche profonde vers la couche basse
     for depth in range(current_depth, 0, -1):
         cur_sig = sig[depth]
-        lower_sig = np.zeros(len(layers[depth-1].W))
         if cur_sig is None:
-            sig[depth-1] = lower_sig
             continue
-        # pour chaque connexion (skip ou tube) reliant la couche depth à depth-1
+        lower_sig = np.zeros(len(layers[depth-1].W))
+        # 1) via les skip connections : le neurone C1 qui est connecté au neurone
+        #    cible (to_neuron == neurone actif de la couche depth) reçoit le signal
         for c in skip_connections.connections:
             if c['to_layer'] == depth and c['from_layer'] == depth - 1:
-                # le signal du neurone cible se propage au neurone source pondéré
-                lower_sig[c['from_neuron']] += c['conductance'] * cur_sig[c['to_neuron']]
+                # le signal du neurone cible (to_neuron) se propage au neurone C1 (from_neuron)
+                if c['to_neuron'] < len(cur_sig):
+                    lower_sig[c['from_neuron']] += c['conductance'] * cur_sig[c['to_neuron']]
             elif c['from_layer'] == depth and c['to_layer'] == depth - 1:
-                lower_sig[c['to_neuron']] += c['conductance'] * cur_sig[c['from_neuron']]
-        # si aucune connexion directe, on propage via le champ récepteur moyen
-        if lower_sig.sum() == 0:
-            # propagation par répartition uniforme (champ récepteur complet)
-            lower_sig += cur_sig.mean() / max(1, len(lower_sig))
+                if c['from_neuron'] < len(cur_sig):
+                    lower_sig[c['to_neuron']] += c['conductance'] * cur_sig[c['from_neuron']]
+        # 2) via les similarités de prototypes (champ récepteur) : les neurones
+        #    de la couche inférieure proches du neurone actif reçoivent aussi le signal
+        if lower_sig.sum() == 0 and depth > 0:
+            # recouvrement des prototypes entre la couche inférieure et la couche profonde
+            W_lower = layers[depth-1].W
+            W_upper = layers[depth].W
+            # similarité cosinus entre chaque prototype inférieur et le neurone actif
+            active_neurons = np.nonzero(cur_sig)[0]
+            if len(active_neurons) > 0:
+                for an in active_neurons:
+                    proto = W_upper[an] if an < len(W_upper) else W_upper[-1]
+                    sim = W_lower @ proto / (np.linalg.norm(W_lower,axis=1)*np.linalg.norm(proto)+1e-8)
+                    lower_sig += cur_sig[an] * np.clip(sim, 0, None)
         # normaliser pour éviter l'explosion
         m = lower_sig.max()
         if m > 0:
@@ -123,3 +134,40 @@ def topdown_projection(model, image_zn, target_depth, target_neuron,
     # 4) masque par patch : les patches dont le neurone C1 reçoit le rétro-signal
     mask_patches = spatial_mask_c1(c1_sig, c1_winners, threshold)
     return mask_patches
+
+
+def multi_instance_topdown(model, image_zn, target_depth, threshold=0.5,
+                           min_coverage=0.005, max_instances=6, patch_size=4):
+    """EXTRACTION MULTI-INSTANCES : un masque par neurone actif en couche profonde.
+
+    Pour chaque neurone de la couche profonde qui gagne des patches, on génère
+    son masque = les patches dont il est le gagnant (activation directe C8),
+    affiné par la projection top-down (C1 comme filtre spatial).
+
+    Retourne :
+      dict {neurone_id: masque_patches}  — masque binaire par neurone actif
+      (les neurones qui couvrent < min_coverage des patches sont ignorés)
+    """
+    layers = model.layers + [model.layer]
+    n_neurons = layers[target_depth].W.shape[0]
+    deep_acts = image_zn @ layers[target_depth].W.T
+    deep_winners = np.argmax(deep_acts, axis=1)
+    # compter les patches gagnés par chaque neurone
+    coverage = np.bincount(deep_winners, minlength=n_neurons)
+    n_patches = len(deep_winners)
+    # neurones actifs (gagnent des patches) avec couverture suffisante
+    active = np.argsort(coverage)[::-1]
+    masks = {}
+    n_added = 0
+    for neuron in active:
+        if coverage[neuron] == 0:
+            continue
+        if coverage[neuron] / n_patches < min_coverage:
+            continue
+        if n_added >= max_instances:
+            break
+        # masque = les patches où ce neurone C8 gagne (distinct par neurone)
+        mask = (deep_winners == neuron).astype(float)
+        masks[int(neuron)] = mask
+        n_added += 1
+    return masks

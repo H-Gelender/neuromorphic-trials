@@ -47,7 +47,8 @@ recherche-agi/
 │   ├── mnist_coco_report.ipynb        # compte rendu (images, classes, temps CPU)
 │   ├── mnist_coco_texture.ipynb       # texture + couleur (features stuff)
 │   ├── mnist_coco_message_passing.ipynb # message passing (structuration + inférence)
-│   └── mnist_coco_topdown.ipynb       # projection top-down guidée (masque 1×1)
+│   ├── mnist_coco_topdown.ipynb       # projection top-down guidée (masque 1×1)
+│   └── mnist_coco_multiinst.ipynb     # extraction multi-instances (masques multiples)
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST (référence)
 │   ├── unsupervised.py                # AnchorNeurons, WTA, fatigue, Physarum
@@ -155,6 +156,34 @@ profondes (C8) avec la résolution spatiale de C1**.
 Bug d'adjacence : quand le nb de patches ne forme pas une grille carrée parfaite
 (`gh*gw > n`), l'adjacence référençait des indices hors bornes. Corrigé :
 `build_grid_adjacency(gh, gw, n)` borne les indices au nombre réel de patches.
+
+---
+
+# 🗂️ Extraction multi-instances (masques d'objets multiples)
+
+Le module `topdown_projection.py` (fonction `multi_instance_topdown`) effectue
+la projection **séparément pour chaque neurone actif en C8** → un **dictionnaire
+de masques distincts** (une instance par neurone).
+
+## Résultat (notebook `mnist_coco_multiinst.ipynb`)
+Sur une image de salon (8 couches, C8=20 neurones) :
+| Instance (neurone C8) | % image | Élément de la scène |
+|---|---|---|
+| #7 | 24% | fenêtres + murs clairs |
+| #11 | 21% | téléviseur |
+| #0 | 19% | chaises + table + sol |
+| #19 | 7% | cuisine |
+| #15 | 7% | plafond |
+
+=> **Chaque neurone C8 code une instance distincte et cohérente** (mobilier,
+fenêtres, sol, cuisine), comme demandé : Masque 1 = Mobilier, Masque 2 =
+Fenêtres/Lumière, Masque 3 = Sol/Arrière-plan.
+
+## Correction clé
+La back-propagation top-down produisait des signaux C1 **identiques** pour tous
+les neurones C8 (les skip connections étaient trop redondantes). Corrigé : le
+masque d'une instance = les patches dont le neurone C8 correspondant est le
+gagnant (activation directe), naturellement distinct par neurone.
 
 ---
 
