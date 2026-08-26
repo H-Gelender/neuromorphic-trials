@@ -11,13 +11,23 @@ Modules conservés :
                     top-down feedback, élagage Physarum
 - training.py     : entraînement auxiliaire (gardé pour référence)
 """
+from .coco_scenes import CocoScenes, PALETTE, STUFF_CLASSES
 from .data import filter_by_digits, load_mnist
 from .unsupervised import (AnchorNeurons, DynamicAnchorNeurons, dynamic_k,
                            homeostatic_threshold, image_to_patches,
                            topdown_feedback)
 from .stable_layers import RespiratoryController, StructuralActivitySignal
+from .coco_pipeline import accuracy_per_class, classify_patch, train_class_by_class
 
 __all__ = [
+    # scènes COCO (prototype de scale)
+    "CocoScenes",
+    "PALETTE",
+    "STUFF_CLASSES",
+    # pipeline COCO classe par classe
+    "train_class_by_class",
+    "classify_patch",
+    "accuracy_per_class",
     # données
     "filter_by_digits",
     "load_mnist",

@@ -78,12 +78,15 @@ recherche-agi/
 │   ├── mnist_respiratory_cycle.ipynb   # cycle respiratoire (gel dynamique + création de couches)
 │   ├── mnist_respiratory_test.ipynb    # test du cycle sur MNIST (IoU + bounding boxes)
 │   ├── mnist_mode_collapse.ipynb       # mode collapse + domination densité
-│   └── mnist_focus_iterative.ipynb     # méthode itérative avec FOCUS (accuracy)
+│   ├── mnist_focus_iterative.ipynb     # méthode itérative avec FOCUS (accuracy)
+│   └── mnist_coco_scale.ipynb          # scale vers COCO Stuff (classe par classe)
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
 │   ├── unsupervised.py                # AnchorNeurons, WTA, fatigue, co-activation,
 │   │                                  #   top-down, image_to_patches, élagage Physarum
 │   ├── stable_layers.py               # cycle respiratoire (S(t), gel, spawning, dégel)
+│   ├── coco_pipeline.py               # entraînement COCO classe par classe
+│   ├── coco_scenes.py                 # scènes COCO (classes, palette, construction)
 │   └── training.py                    # entraînement auxiliaire (référence)
 └── README.md
 ```
@@ -533,3 +536,44 @@ une **méthode itérative avec focus** (attention visuelle : saccade + fovéa).
 l'**accuracy** mesure la classification après focus. Le focus aide : un 7 isolé
 est bien classé (conf 0.61) alors qu'il était mal classé dans la scène brute
 (mode collapse).
+
+---
+
+# 🌍 Scale vers COCO Stuff
+
+Le notebook `notebooks/mnist_coco_scale.ipynb` scale le pipeline vers **COCO
+Stuff** (images de scènes réelles, ~171 classes stuff). Dataset HuggingFace
+`shunk031/cocostuff`, entraînement **CLASSE PAR CLASSE** (leçon critique).
+
+## Setup
+- 30 images COCO réelles → **~54 classes stuff**, patches 32×32 (1024 dims)
+- `datasets` 2.21 (les scripts ne sont plus supportés par 5.x) + `trust_remote_code=True`
+
+## Résultats (classes distinctes)
+| Classe | Acc |
+|---|---|
+| **house (105)** | **0.979** |
+| railing (112) | 0.167 |
+| sky (118) | 0.242 |
+| snow (120) | 0.040 |
+| **Moyenne** | **0.357** |
+
+Détection avec focus : les objets sont détectés, house est correctement classée
+(conf 0.88-0.90).
+
+## Analyse honnête
+1. **OK** : l'apprentissage **classe par classe** fonctionne pour les classes
+   **homogènes** (house 0.98).
+2. **LIMITE** : les classes stuff COCO sont **hétérogènes** (une même classe
+   regroupe des textures très variables) → snow 0.04, sky 0.24 s'effondrent.
+3. **Scale à 54 classes** : échoue (acc ~0 sur la plupart) — la **variance
+   intra-classe** explose avec le nombre de classes.
+
+## Pistes
+- plus de neurones, patches plus grands
+- **caractéristiques de texture** (au lieu de pixels bruts) pour séparer les
+  classes stuff (sky/snow, road/gravel)
+- des couches hiérarchiques (le cycle respiratoire) pour abstraire les textures
+
+=> Le scale vers COCO révèle la limite réelle : l'hétérogénéité intra-classe
+des classes stuff, pas la capacité du pipeline classe par classe.
