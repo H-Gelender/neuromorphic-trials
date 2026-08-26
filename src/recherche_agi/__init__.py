@@ -26,6 +26,7 @@ from .visualize_coco_images import (colormap_mask, visualize_coco_sample,
 from .evolutive_coco import EvolutiveCOCO
 from .monitor import (architecture_frame, draw_architecture,
                       save_architecture_gif)
+from .report import TrainingTracker, generate_report
 
 __all__ = [
     # scènes COCO (prototype de scale)
@@ -47,7 +48,9 @@ __all__ = [
     "visualize_patches_rgb",
     # entraînement évolutif COCO
     "EvolutiveCOCO",
-    # monitoring architecture évolutive
+    # monitoring + rapport
+    "TrainingTracker",
+    "generate_report",
     "draw_architecture",
     "architecture_frame",
     "save_architecture_gif",
