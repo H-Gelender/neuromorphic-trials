@@ -23,7 +23,7 @@ from .online_training import EquilibriumCallback
 from .visualize import visualize_architecture, visualize_evolution, visualize_input
 from .visualize_coco_images import (colormap_mask, visualize_coco_sample,
                                     visualize_patches_rgb)
-from .evolutive_coco import EvolutiveCOCO
+from .evolutive_coco import HierarchicalCOCO
 from .monitor import (architecture_frame, draw_architecture,
                       save_architecture_gif)
 from .report import TrainingTracker, generate_report
@@ -49,7 +49,7 @@ __all__ = [
     "visualize_coco_sample",
     "visualize_patches_rgb",
     # entraînement évolutif COCO
-    "EvolutiveCOCO",
+    "HierarchicalCOCO",
     # monitoring + rapport
     "TrainingTracker",
     "generate_report",

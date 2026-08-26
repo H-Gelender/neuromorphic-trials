@@ -94,7 +94,7 @@ recherche-agi/
 │   ├── coco_scenes.py                 # scènes COCO (classes, palette, construction)
 │   ├── texture_features.py            # caractéristiques couleur + texture
 │   ├── online_training.py             # callback d'équilibre (ΔW/ΔS/ΔD) + arrêt 1h
-│   ├── evolutive_coco.py              # entraînement évolutif (neurogenèse + couches)
+│   ├── evolutive_coco.py              # hiérarchie profonde (création de couches, neurones divisés)
 │   ├── monitor.py                     # visuels architecture évolutive (GIF)
 │   ├── report.py                      # compte rendu (images, classes, temps CPU)
 │   ├── message_passing.py             # message passing sur graphe (consensus + inhibition)
@@ -782,3 +782,38 @@ renforcent, les autres s'élaguent).
 Le message passing **lisse le bruit sans imposer de formule classique** : le
 graphe trouve un consensus local, et les frontières (contours) sont préservées
 par l'inhibition de surprise.
+
+---
+
+# 🏗️ Hiérarchie profonde : création de couches + reconstruction par couche
+
+Nouvelle stratégie : privilégier la **profondeur** plutôt que la largeur
+(module `HierarchicalCOCO`).
+
+## Le défi relevé : créer de nouvelles couches
+Le modèle **crée maintenant réellement des couches** (le défi principal) via un
+**spawn par plateau de surprise** :
+- quand la surprise de reconstruction ne descend plus sur une fenêtre (la couche
+  a atteint ses limites topologiques), une **nouvelle couche plus profonde** est
+  créée
+- exige un minimum de neurones avant de spawner (pas de spawn prématuré)
+
+## Neurones divisés par couche
+- **C1** : bridée à max_neurons (2000)
+- **C2** : /2, **C3** : /4, etc. — les couches profondes sont plus compactes
+
+## Résultat : 7 couches créées (tailles divisées)
+`[54, 82, 73, 53, 50, 62, 31]` neurones sur 7 couches.
+
+## Reconstruction par couche (patches 4×4)
+| Couche | Neurones | Représentation |
+|---|---|---|
+| C1 | 54 | détaillée, mosaïque, on voit fenêtre/sol/meubles |
+| C2-C5 | — | évolution progressive |
+| C6 | 62 | plus abstraite, formes simples |
+| C7 | 31 | **la plus abstraite** — grandes taches, scène à peine reconnaissable |
+
+=> **Abstraction hiérarchique** : les couches peu profondes (C1) conservent les
+détails, les couches profondes (C7) compressent en concepts abstraits — comme un
+CNN. Le modèle **crée ses couches lui-même** et choisit le nombre de neurones
+par couche.
