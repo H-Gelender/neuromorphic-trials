@@ -15,6 +15,7 @@ from .data import filter_by_digits, load_mnist
 from .unsupervised import (AnchorNeurons, DynamicAnchorNeurons, dynamic_k,
                            homeostatic_threshold, image_to_patches,
                            topdown_feedback)
+from .stable_layers import RespiratoryController, StructuralActivitySignal
 
 __all__ = [
     # données
@@ -27,4 +28,7 @@ __all__ = [
     "homeostatic_threshold",
     "image_to_patches",
     "topdown_feedback",
+    # couches stables / cycle respiratoire
+    "RespiratoryController",
+    "StructuralActivitySignal",
 ]

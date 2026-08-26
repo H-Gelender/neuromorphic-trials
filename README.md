@@ -74,11 +74,13 @@ recherche-agi/
 │   ├── mnist_threshold_wta_patches.ipynb # WTA par seuil + découpage image
 │   ├── mnist_multidigit_detection.ipynb # détection multi-chiffres (stride + bounding box)
 │   ├── mnist_reconstruction_detection.ipynb # reconstruction image + 2 scores (IoU & count)
-│   └── mnist_metaneurons.ipynb         # méta-neurones (centroïdes de prototypes)
+│   ├── mnist_metaneurons.ipynb         # méta-neurones (centroïdes de prototypes)
+│   └── mnist_respiratory_cycle.ipynb   # cycle respiratoire (gel dynamique + création de couches)
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST + filtre par chiffres
 │   ├── unsupervised.py                # AnchorNeurons, WTA, fatigue, co-activation,
 │   │                                  #   top-down, image_to_patches, élagage Physarum
+│   ├── stable_layers.py               # cycle respiratoire (S(t), gel, spawning, dégel)
 │   └── training.py                    # entraînement auxiliaire (référence)
 └── README.md
 ```
@@ -389,3 +391,39 @@ $$S_{ij} = \\frac{W_i \\cdot W_j}{\\|W_i\\|\\,\\|W_j\\|}, \\qquad W_{\\text{meta
 => Les méta-neurones apportent la **réduction du réseau** et une **meilleure
 robustesse de localisation**, au prix d'une reconstruction visuelle moins
 spécifique.
+
+---
+
+# 🌬️ Cycle respiratoire : gel dynamique + création de couches
+
+Le notebook `notebooks/mnist_respiratory_cycle.ipynb` construit un système qui
+**gèle et crée des couches dynamiquement** pour être plus stable (compromis
+Plasticité/Stabilité de Grossberg).
+
+## Signal d'Activité Structurelle S(t) + détection d'oscillation (FFT)
+$$S(t) = \text{Taux de Création}(t) - \text{Taux d'Élagage}(t)$$
+
+L'analyse **fréquentielle (FFT)** de $S(t)$ distingue :
+- **Signal plat / bruit blanc** → stabilité
+- **Pic fréquentiel net (cycle limite)** → instabilité → déclenche les leviers
+
+## Cycle respiratoire complet (démontré)
+| Phase | État |
+|---|---|
+| **Exploration** | C1 dégelée, 1 couche (plasticité) |
+| **Consolidation** | oscillation → gel de C1 + **spawning de C2** (2 couches) |
+| **Perturbation** | objet inconnu → surprise → **dégel sélectif** |
+
+## Surprise de reconstruction (déclencheur de dégel)
+- **Chiffres connus** : surprise 0.66 (faible, restent gelés)
+- **Objets inconnus** : surprise 0.96 (élevée, persistant → dégel)
+
+## Les 3 leviers + plasticité sélective
+1. **Amortissement** : augmentation de la viscosité λ (dissipe l'oscillation)
+2. **Méta-neurones** : fusion des oscillateurs instables
+3. **Spawning de couche** : gel C1 + création C2 (presse top-down)
+4. **Dégel** : neurogenèse d'extension (W1 gelé, ajout de neurones) + métro-plasticité
+   η(S) par recuit simulé.
+
+=> Le réseau **"respire"** : il alterne plasticité (explorer) et stabilité
+(consolider), au lieu d'une structure rigide.
