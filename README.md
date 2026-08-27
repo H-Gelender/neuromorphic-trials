@@ -12,30 +12,34 @@ la **création dynamique de couches**.
 [ Image COCO ] → patches (4×4) → features (couleur + texture)
       │
       ▼
-[ Couche C1 ]  AnchorNeurons (max 2000) — neurogenèse progressive
+[ Couche C1 ]  AnchorNeurons + MHN (softmax βWx) — neurogenèse libre
       │  + fatigue homéostatique + élagage Physarum
-      ▼  (spawn par plateau de surprise)
-[ Couche C2 ]  neurones /2
+      ▼  (création de couche par stabilité/convergence)
+[ Couche C2 ]  taille libre (aucune contrainte décroissante)
       ▼
-[ Couche C3 ]  neurones /4 ... (hiérarchie profonde)
+[ Couche C3 ]  ...
+      │
+      ▼
+[ Skip Connections ]  inter-couches (C1→profond) + intra-couche (co-actifs)
       │
       ▼
 [ Message Passing ]  consensus spatial + inhibition de surprise (conductivité Physarum)
       │
       ▼
-[ Segmentation / Reconstruction ]
+[ Segmentation / Reconstruction / Masques 1×1 ]
 ```
 
-- **AnchorNeurons** : neurones qui concourent sur les features, le gagnant
-  s'ajuste vers l'entrée (Oja/Kohonen). Clusters émergents sans étiquettes.
-- **Neurogenèse sélective** : ajoute un neurone seulement si le patch est mal
-  représenté (surprise élevée).
-- **Hiérarchie profonde** : quand la surprise ne descend plus (plateau), une
-  **nouvelle couche** est créée (neurones divisés par 2).
-- **Message passing** : les nœuds du graphe s'échangent des messages
-  (résonance = consensus spatial, inhibition = frontières sur les contours).
-- **Élagage Physarum** : atrophie les neurones sous-utilisés, la conductivité
-  pilote l'adjacence du graphe.
+- **AnchorNeurons + Modern Hopfield** : la projection est `z = softmax(β·Wx)`
+  (remplace le WTA), la surprise est continue : `S = ‖x - W^T·z‖²`.
+- **Neurogenèse libre** : croissance pilotée par la surprise, **sans plafond**
+  fixe par couche (max_neurons quasi illimité).
+- **Hiérarchie profonde** : une couche est créée quand la surprise converge
+  (stabilité), tailles **arbitraires** (pas de contrainte décroissante).
+- **Skip connections** : inter-couches (C1→profondes, ResNet-like) + **intra-
+  couche** (neurones co-actifs), **sans plafond** (régulé par l'élagage Physarum).
+- **Condition de fin = ÉQUILIBRE** : l'entraînement s'arrête quand la surprise
+  ne descend plus sur une fenêtre (convergence), pas au bout d'un nombre fixe.
+- **Message passing** : résonance (consensus) + inhibition (frontières).
 
 ## 📁 Structure
 
@@ -240,8 +244,13 @@ cd C:/Users/henry/Desktop/workspace/recherche-agi
 1. **Entraînement classe par classe** (jamais tous les labels d'un coup).
 2. **Caractéristiques = la nature du problème** : texture/couleur pour les scènes,
    pixels pour les formes.
-3. **Hiérarchie profonde > couches larges** : le modèle crée des couches
-   (neurones divisés) au lieu de grossir.
-4. **Message passing** : lissage par consensus spatial + frontières par inhibition.
-5. Le goulot COCO est le **téléchargement réseau** (pas le calcul) — cacher en
+3. **Modern Hopfield > WTA** : `softmax(βWx)` donne une surprise continue et
+   dérivable (pas de faux pics de quantification).
+4. **Pas de plafond artificiel** : la neurogenèse est libre, la stabilité
+   (convergence de la surprise) régule la croissance et crée les couches.
+5. **Skip connections sans plafond** : inter-couches (C1→profond) + intra-couche,
+   régulées par l'élagage Physarum.
+6. **Condition de fin = équilibre** : l'entraînement s'arrête quand la surprise
+   ne descend plus (convergence), pas au bout d'un nombre fixe d'itérations.
+7. Le goulot COCO est le **téléchargement réseau** (pas le calcul) — cacher en
    local les données.

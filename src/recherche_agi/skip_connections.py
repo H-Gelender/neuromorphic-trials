@@ -18,18 +18,17 @@ class SkipConnections:
     structure : liste de dict {from_layer, from_neuron, to_layer, to_neuron, conductance}
     """
 
-    def __init__(self, max_connections=1000, init_conductance=0.1,
+    def __init__(self, max_connections=10**9, init_conductance=0.1,
                  grow_rate=0.05, prune_threshold=0.01):
-        self.max_connections = max_connections
+        self.max_connections = max_connections  # quasi illimité (pas de plafond)
         self.init_conductance = init_conductance
         self.grow_rate = grow_rate
         self.prune_threshold = prune_threshold
         self.connections = []       # liste de tubes
 
     def add_candidate(self, from_layer, from_neuron, to_layer, to_neuron):
-        """Étape A : pousse synaptique (connexion candidate à faible conductance)."""
-        if len(self.connections) >= self.max_connections:
-            return None
+        """Étape A : pousse synaptique (connexion candidate à faible conductance).
+        AUCUN plafond : le nombre est régulé par l'élagage Physarum (prune)."""
         # éviter les doublons
         for c in self.connections:
             if (c['from_layer'], c['from_neuron'], c['to_layer'], c['to_neuron']) == \
