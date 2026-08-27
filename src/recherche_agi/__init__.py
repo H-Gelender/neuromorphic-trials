@@ -34,6 +34,8 @@ from .skip_connections import SkipConnections
 from .topdown_projection import (activate_deep_neuron, backprop_topdown,
                                  spatial_mask_c1, project_to_pixels,
                                  topdown_projection, multi_instance_topdown)
+from .modern_hopfield import (project_hopfield, reconstruct, surprise,
+                              winner_hopfield, oja_hopfield_update)
 
 __all__ = [
     # scènes COCO (prototype de scale)
@@ -74,6 +76,12 @@ __all__ = [
     "project_to_pixels",
     "topdown_projection",
     "multi_instance_topdown",
+    # modern hopfield network (remplace le WTA)
+    "project_hopfield",
+    "reconstruct",
+    "surprise",
+    "winner_hopfield",
+    "oja_hopfield_update",
     "draw_architecture",
     "architecture_frame",
     "save_architecture_gif",

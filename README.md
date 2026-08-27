@@ -48,7 +48,8 @@ recherche-agi/
 │   ├── mnist_coco_texture.ipynb       # texture + couleur (features stuff)
 │   ├── mnist_coco_message_passing.ipynb # message passing (structuration + inférence)
 │   ├── mnist_coco_topdown.ipynb       # projection top-down guidée (masque 1×1)
-│   └── mnist_coco_multiinst.ipynb     # extraction multi-instances (masques multiples)
+│   ├── mnist_coco_multiinst.ipynb     # extraction multi-instances (masques multiples)
+│   └── mnist_coco_hopfield.ipynb      # modern hopfield network (remplace le WTA)
 ├── src/recherche_agi/
 │   ├── data.py                        # chargement MNIST (référence)
 │   ├── unsupervised.py                # AnchorNeurons, WTA, fatigue, Physarum
@@ -57,6 +58,7 @@ recherche-agi/
 │   ├── message_passing.py             # message passing sur graphe (structuration + inférence)
 │   ├── skip_connections.py            # skip connections transversales auto-régulées
 │   ├── topdown_projection.py          # projection top-down guidée (masque 1×1)
+│   ├── modern_hopfield.py             # MHN : softmax(βWx) remplace le WTA
 │   ├── online_training.py             # callback d'équilibre (ΔW/ΔS/ΔD)
 │   ├── monitor.py                     # visuels architecture évolutive
 │   ├── report.py                      # compte rendu (TrainingTracker)
@@ -184,6 +186,34 @@ La back-propagation top-down produisait des signaux C1 **identiques** pour tous
 les neurones C8 (les skip connections étaient trop redondantes). Corrigé : le
 masque d'une instance = les patches dont le neurone C8 correspondant est le
 gagnant (activation directe), naturellement distinct par neurone.
+
+---
+
+# 🧲 Modern Hopfield Network (remplace le WTA)
+
+Le module `modern_hopfield.py` remplace le **WTA (argmax brutal)** par la
+**dynamique de rappel de Modern Hopfield** :
+$$z = \\text{softmax}(\\beta \\cdot W x)$$
+
+- **β (inverse de température)** : levier de contrôle ultime
+  - β → ∞ : retrouve un **WTA dur** (1 neurone à 100%)
+  - β modéré : **consensus continu et lissé** (élimine le bruit sans perdre la compétition)
+- **Reconstruction** : $x_{rec} = W^T z$ (combinaison convexe des motifs)
+- **Surprise continue** : $\\mathcal{S}_{auto} = \\|x - W^T \\cdot \\text{softmax}(\\beta W x)\\|^2$ — dérivable, sans faux pics de quantification
+- **Plasticité Oja** : pondérée par $z$ continu (converge vers les attracteurs)
+
+## Effet de β (notebook `mnist_coco_hopfield.ipynb`)
+| β | Distribution z |
+|---|---|
+| 0.1 | consensus lissé (toutes les activations contribuent) |
+| 1-5 | compromis |
+| 50-500 | WTA dur (1 neurone dominant) |
+
+## Intégration (le reste de l'architecture inchangé)
+- Surprise continue pour déclencher la création de couches (plateau propre)
+- Oja pondérée par z continu
+- Message passing régularise les vecteurs d'activations lissés z
+- Le pipeline s'entraîne : surprise 1.559 → 0.614
 
 ---
 

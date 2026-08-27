@@ -13,6 +13,8 @@ from recherche_agi.skip_connections import SkipConnections
 from recherche_agi.message_passing import (build_grid_adjacency,
                                            message_passing_train,
                                            update_physarum_conductance)
+from recherche_agi.modern_hopfield import (project_hopfield, surprise,
+                                           oja_hopfield_update)
 
 
 class HierarchicalCOCO:
@@ -21,8 +23,9 @@ class HierarchicalCOCO:
 
     def __init__(self, d_in=35, n_init=10, novelty_threshold=0.7,
                  max_neurons=2000, surprise_plateau=0.002, plateau_window=300,
-                 min_neurons_before_spawn=50, skip_active=True):
+                 min_neurons_before_spawn=50, skip_active=True, beta=5.0):
         self.d_in = d_in
+        self.beta = beta                  # inverse de température du MHN
         self.novelty_threshold = novelty_threshold
         self.base_max = max_neurons          # C1 = 2000
         self.surprise_plateau = surprise_plateau  # si la surprise ne descend plus -> spawn
@@ -51,16 +54,20 @@ class HierarchicalCOCO:
             novelty_threshold=self.novelty_threshold, max_neurons=max_n)
 
     def step(self, features, label):
-        """Traite un patch. Spawn quand la surprise ne descend plus (plateau)."""
+        """Traite un patch via MODERN HOPFIELD. Spawn quand la surprise plafonne."""
         zn = features / (np.linalg.norm(features) + 1e-8)
         if len(self.layer.W) == 0:
             S = 1.0
         else:
-            w = int(np.argmax(self.layer.W @ zn))
-            S = float(np.linalg.norm(zn - self.layer.W[w])**2)
+            # surprise continue et dérivable (MHN) : S = ||x - W^T·softmax(βWx)||²
+            S = float(surprise(zn, self.layer.W, beta=self.beta)[0])
 
-        # apprentissage + neurogenèse
-        self.layer.learn(zn, k=dynamic_k(0.5, 1, 3), label=label)
+        # apprentissage : plasticité Oja pondérée par z continu (au lieu de WTA binaire)
+        self.layer.W = oja_hopfield_update(self.layer.W, zn, beta=self.beta,
+                                           lr=self.layer.lr)[0]
+        # neurogenèse : si la surprise est élevée, ajouter un neurone (dans la limite)
+        if S > self.novelty_threshold and self.layer.n_neurons_current < self.layer.max_neurons:
+            self.layer._grow(zn, label)
         self.layer.physarum_prune(0.02)
 
         # --- SYNAPTOGENÈSE (skip connections) ---
