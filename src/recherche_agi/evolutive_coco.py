@@ -23,11 +23,14 @@ class HierarchicalCOCO:
 
     def __init__(self, d_in=35, n_init=10, novelty_threshold=0.7,
                  max_neurons=2000, surprise_plateau=0.002, plateau_window=300,
-                 min_neurons_before_spawn=50, skip_active=True, beta=5.0):
+                 min_neurons_before_spawn=50, skip_active=True, beta=5.0,
+                 growth_scale=3.0, growth_cap=5000):
         self.d_in = d_in
         self.beta = beta                  # inverse de température du MHN
         self.novelty_threshold = novelty_threshold
-        self.base_max = max_neurons          # C1 = 2000
+        self.growth_scale = growth_scale  # nb de neurones ajoutés par unité de surprise
+        self.growth_cap = growth_cap      # plafond de sécurité (très haut, quasi illimité)
+        self.base_max = max_neurons          # référence pour le scaling des couches
         self.surprise_plateau = surprise_plateau  # si la surprise ne descend plus -> spawn
         self.plateau_window = plateau_window
         self.min_neurons_before_spawn = min_neurons_before_spawn
@@ -54,31 +57,37 @@ class HierarchicalCOCO:
             novelty_threshold=self.novelty_threshold, max_neurons=max_n)
 
     def step(self, features, label):
-        """Traite un patch via MODERN HOPFIELD. Spawn quand la surprise plafonne."""
+        """Traite un patch via MHN. NEUROGENÈSE AGGRESSIVE + détection de stabilité.
+
+        - Neurogenèse : ajoute PLUSIEURS neurones quand la surprise est élevée
+          (n_add = int(S * growth_scale)), sans plafond fixe.
+        - Stabilité : on suit la variation des prototypes; si la couche converge
+          (prototypes stables), on crée une nouvelle couche.
+        """
         zn = features / (np.linalg.norm(features) + 1e-8)
         if len(self.layer.W) == 0:
             S = 1.0
         else:
-            # surprise continue et dérivable (MHN) : S = ||x - W^T·softmax(βWx)||²
             S = float(surprise(zn, self.layer.W, beta=self.beta)[0])
 
-        # apprentissage : plasticité Oja pondérée par z continu (au lieu de WTA binaire)
+        # apprentissage : plasticité Oja pondérée par z continu (MHN)
         self.layer.W = oja_hopfield_update(self.layer.W, zn, beta=self.beta,
                                            lr=self.layer.lr)[0]
-        # neurogenèse : si la surprise est élevée, ajouter un neurone (dans la limite)
-        if S > self.novelty_threshold and self.layer.n_neurons_current < self.layer.max_neurons:
+
+        # --- NEUROGENÈSE AGGRESSIVE : plusieurs neurones si surprise élevée ---
+        # la surprise est normalisée ~[0,1] -> n_add = int(S * growth_scale)
+        n_add = int(S * self.growth_scale)
+        if n_add > 0:
+            for _ in range(n_add):
+                self.layer._grow(zn, label)
+        # toujours au moins 1 neurone si la surprise dépasse le seuil de nouveauté
+        if S > self.novelty_threshold and len(self.layer.W) < self.growth_cap:
             self.layer._grow(zn, label)
-        self.layer.physarum_prune(0.02)
+        self.layer.physarum_prune(0.01)
 
-        # --- SYNAPTOGENÈSE (skip connections) ---
-        # si des couches profondes existent, on tisse des connexions candidates
-        # depuis C1 (détails fins) vers la couche courante, validées par la surprise.
-        if self.skip_active and len(self.layers) >= 1:
-            self._synaptogenesis(zn, S)
-
-        # --- DÉFI : SPAWN PAR PLATEAU DE SURPRISE ---
-        # si la surprise moyenne sur une fenêtre ne descend plus (variation < seuil),
-        # la couche actuelle a atteint ses limites -> on crée une couche plus profonde.
+        # --- DÉTECTION DE STABILITÉ (remplace le plafond max_neurons) ---
+        # si la couche a assez de neurones ET que les prototypes ne changent
+        # presque plus (convergence), on crée une nouvelle couche.
         self._surprises.append(S)
         if len(self._surprises) > self.plateau_window:
             self._surprises.pop(0)
@@ -86,11 +95,14 @@ class HierarchicalCOCO:
             half = self.plateau_window // 2
             mean_first = float(np.mean(self._surprises[:half]))
             mean_second = float(np.mean(self._surprises[half:]))
-            # plateau : la 2e moitié ne descend plus (ou remonte)
-            # ET il faut que la couche ait assez de neurones (pas de spawn prématuré)
+            # plateau de surprise (convergence) + assez de neurones -> nouvelle couche
             if (mean_first - mean_second) < self.surprise_plateau \
                and self.layer.n_neurons_current >= self.min_neurons_before_spawn:
                 self._spawn_layer()
+
+        # --- SYNAPTOGENÈSE (skip connections) ---
+        if self.skip_active and len(self.layers) >= 1:
+            self._synaptogenesis(zn, S)
 
         self.n_patch += 1
         self.history['n_neurons'].append(self.layer.n_neurons_current)
