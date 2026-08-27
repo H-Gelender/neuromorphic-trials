@@ -46,33 +46,20 @@ la **création dynamique de couches**.
 ```
 recherche-agi/
 ├── notebooks/
-│   ├── mnist_coco_evolutive.ipynb     # hiérarchie profonde (création de couches)
-│   ├── mnist_coco_monitor.ipynb       # monitoring (perf + reconstruction + archi)
-│   ├── mnist_coco_report.ipynb        # compte rendu (images, classes, temps CPU)
-│   ├── mnist_coco_texture.ipynb       # texture + couleur (features stuff)
-│   ├── mnist_coco_message_passing.ipynb # message passing (structuration + inférence)
-│   ├── mnist_coco_topdown.ipynb       # projection top-down guidée (masque 1×1)
-│   ├── mnist_coco_multiinst.ipynb     # extraction multi-instances (masques multiples)
-│   └── mnist_coco_hopfield.ipynb      # modern hopfield network (remplace le WTA)
+│   └── coco_pipeline.ipynb           # PIPELINE FINAL (MHN + hiérarchie + skip + perf)
 ├── src/recherche_agi/
-│   ├── data.py                        # chargement MNIST (référence)
-│   ├── unsupervised.py                # AnchorNeurons, WTA, fatigue, Physarum
-│   ├── evolutive_coco.py              # HierarchicalCOCO (création de couches)
-│   ├── texture_features.py            # features couleur + texture
-│   ├── message_passing.py             # message passing sur graphe (structuration + inférence)
-│   ├── skip_connections.py            # skip connections transversales auto-régulées
-│   ├── topdown_projection.py          # projection top-down guidée (masque 1×1)
-│   ├── modern_hopfield.py             # MHN : softmax(βWx) remplace le WTA
-│   ├── online_training.py             # callback d'équilibre (ΔW/ΔS/ΔD)
-│   ├── monitor.py                     # visuels architecture évolutive
-│   ├── report.py                      # compte rendu (TrainingTracker)
-│   ├── visualize.py                   # visuels architecture + évolution
-│   ├── visualize_coco_images.py       # visuels images COCO claires
-│   ├── coco_pipeline.py               # entraînement classe par classe
-│   ├── coco_scenes.py                 # scènes COCO (classes, palette)
-│   └── stable_layers.py               # cycle respiratoire (référence)
+│   ├── unsupervised.py               # AnchorNeurons, DynamicAnchorNeurons (base)
+│   ├── evolutive_coco.py             # HierarchicalCOCO (pipeline final, condition d'équilibre)
+│   ├── texture_features.py           # features couleur + texture
+│   ├── modern_hopfield.py            # MHN : softmax(βWx) remplace le WTA
+│   ├── message_passing.py            # message passing sur graphe (structuration + inférence)
+│   ├── skip_connections.py           # skip connections sans plafond (inter + intra)
+│   └── topdown_projection.py         # projection top-down guidée (masque 1×1, multi-instances)
 └── README.md
 ```
+
+Le repo est nettoyé : **1 seul notebook** (`coco_pipeline.ipynb`) qui couvre tout
+le pipeline, et uniquement les modules nécessaires au pipeline final.
 
 ## 📊 Résultats clés
 
